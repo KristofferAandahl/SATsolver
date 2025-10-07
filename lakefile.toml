@@ -1,0 +1,10 @@
+name = "SATsolver"
+version = "0.1.0"
+defaultTargets = ["satsolver"]
+
+[[lean_lib]]
+name = "SATsolver"
+
+[[lean_exe]]
+name = "satsolver"
+root = "Main"
