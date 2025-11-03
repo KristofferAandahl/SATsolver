@@ -28,12 +28,51 @@ def getLiteral: AnnotatedLit → Lit
   | decided l _ => l
   | propogated l _ => l
 
-@[simp] theorem simp_getName (lit : AnnotatedLit) : lit.getLiteral.getName = lit.getName := by
+def negate : AnnotatedLit → AnnotatedLit
+  | decided l k => decided l.negated k
+  | propogated l c => propogated l.negated c
+
+instance : Coe AnnotatedLit Lit  where
+  coe a := a.getLiteral
+
+def isPos : AnnotatedLit → Bool
+  | decided (Lit.pos _) _  => true
+  | decided (Lit.neg _) _ => false
+  | propogated (Lit.pos _) _ => true
+  | propogated (Lit.neg _) _ => false
+
+@[simp]
+theorem simp_getName (lit : AnnotatedLit) : lit.getLiteral.getName = lit.getName := by
   cases lit
   case decided l n =>
     simp[getLiteral, getName]
   case propogated l c =>
     simp[getLiteral, getName]
+
+theorem name_negated {a : AnnotatedLit} :
+  a.getName = a.negate.getName := by
+  simp[negate, ←simp_getName]
+  rcases a with ⟨ l, k ⟩ | ⟨ l, c ⟩
+  all_goals
+    simp[getLiteral]
+
+theorem name_ineq {a b : AnnotatedLit} :
+  a.getName ≠ b.getName → a ≠ b := by
+  rcases a with ⟨ al, ak ⟩ | ⟨ al, ac ⟩ <;>
+  rcases b with ⟨ bl, bk ⟩ | ⟨ bl, bc ⟩
+  case decided.propogated | propogated.decided => simp
+  case decided.decided | propogated.propogated=>
+    intro h
+    simp[←simp_getName, getLiteral] at h
+    rcases al with n | n <;>
+    rcases bl with m | m
+    case pos.neg | neg.pos => simp
+    case pos.pos | neg.neg =>
+      simp[Lit.getName] at h ⊢
+      intro
+      contradiction
+
+
 
 instance : BEq AnnotatedLit where
   beq a b := match a with
@@ -68,13 +107,14 @@ instance : LawfulBEq AnnotatedLit where
     case decided l n =>
       cases l <;> simp
     case propogated l c =>
-      cases l <;> simp
+      cases l
       all_goals
+      rcases c with ⟨ c, inv ⟩
       induction c with
       | nil => simp[Clause.beq]
       | cons b bs ih =>
-        simp[Clause.beq]
-        exact ih
+        simp[Clause.beq] at ih ⊢
+        exact ih inv.2.2
 
 end AnnotatedLit
 

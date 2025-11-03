@@ -1,8 +1,8 @@
-import SATsolver.Data.Tail
-import SATsolver.Data.Clause
+import SATsolver.Data.Trail
+import SATsolver.Data.Formula
 
 structure State where
-  M : Tail
+  M : Trail
   N : Formula
   U : Formula
   k : Nat

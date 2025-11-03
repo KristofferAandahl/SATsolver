@@ -63,12 +63,61 @@ instance : LawfulBEq Lit where
     cases a
     all_goals simp[BEq.beq]
 
+theorem neg_negated{l : Lit} :
+  -l = l.negated := by
+    simp[Neg.neg]
+
+@[simp]
+theorem neg_neg (l : Lit) :
+  - - l = l := by
+  cases l
+  all_goals
+    simp[Neg.neg, negated]
+
+theorem neg_ineq (l : Lit) :
+  ¬ l = -l := by
+  intro contra
+  cases l
+  case pos n =>
+    have : pos n = neg n := contra
+    simp at this
+  case neg n =>
+    have : neg n = pos n := contra
+    simp at this
+
+theorem name_eq_neq_ineq(a b : Lit)(wf : a.getName = b.getName):
+  ¬a=-b → a = b := by
+  intro h
+  cases a
+  case pos n =>
+    cases b
+    case pos m => simp[getName] at wf; simp[wf]
+    case neg m =>
+      simp[getName] at wf;
+      simp[wf, Neg.neg] at h;
+      rw[negated] at h
+      contradiction
+  case neg n =>
+    cases b
+    case pos m =>
+      simp[getName] at wf;
+      simp[wf, Neg.neg] at h;
+      rw[negated] at h
+      contradiction
+    case neg m => simp[getName] at wf; simp[wf]
 
 theorem diffNameNEQ (x : Lit)(y : Lit) : x.getName ≠ y.getName → x ≠ y := by
   simp
   intro h contra
   rw[contra] at h
   exact h rfl
+
+theorem same_name(x : Lit)(y : Lit)(wf : x.getName = y.getName) :
+  x = y ∨ x = -y := by
+  cases x <;> cases y <;> simp[getName, Neg.neg] at *
+  case pos.pos | neg.neg => left; exact wf
+  case pos.neg | neg.pos => rw[negated, wf];
+
 
 @[simp] theorem name_of_neg (x : Lit) : x.negated.getName = x.getName := by
   cases x
