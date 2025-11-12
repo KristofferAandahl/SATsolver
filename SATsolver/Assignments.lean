@@ -171,8 +171,12 @@ theorem decided_iff_not_undecided{t : Trail}{l : Lit}:
   ¬t.undecided l ↔ t.decided l:= by
   simp[undecided, decided]
 
+theorem not_decided_iff_undecided{t : Trail}{l : Lit}:
+  t.undecided l ↔ ¬t.decided l:= by
+  simp[undecided, decided]
+
 @[simp]
-theorem decided_iff_sat_or_falsifed (t : Trail)(l : Lit) :
+theorem decided_iff_sat_or_falsifed {t : Trail}{l : Lit} :
   t.satisfies l ∨ t.falsifies l ↔ t.decided l  := by
   simp[decided, satisfies, falsifies]
   constructor
@@ -256,7 +260,7 @@ theorem sat_iff_not_false_or_u (t : Trail)(l : Lit) :
     case inl sat => exact sat
     case inr sat => contradiction
 
-theorem false_iff_not_sat_or_u (t : Trail)(l : Lit) :
+theorem false_iff_not_sat_or_u {t : Trail}{l : Lit} :
   t.falsifies l ↔ ¬t.satisfies l ∧ ¬t.undecided l := by
   simp[←decided_iff_sat_or_falsifed]
   constructor
@@ -315,6 +319,53 @@ def undecidedBy (c : Clause)(t : Trail) :=
 
 def undecidedByB (c : Clause)(t : Trail): Bool :=
   c.lits.any (t.undecidedB .) ∧ c.lits.all (fun l => t.undecidedB l ∨ t.falsifiesB l)
+
+def decidedBy (c : Clause)(t : Trail) :=
+  c.falsifiedBy t ∨ c.satisfiedBy t
+
+theorem undecided_if_not_decided {c : Clause}{t : Trail} :
+  ¬c.decidedBy t → c.undecidedBy t := by
+  simp[decidedBy, undecidedBy, satisfiedBy, falsifiedBy]
+  intro l lmem nFals not_sat_h
+  have nSat := not_sat_h l lmem
+  have nDec : ¬t.decided l := by
+    have nFS := And.intro nFals nSat
+    have : ¬ (t.satisfies l∨ t.falsifies l) := by
+      intro contra
+      cases contra
+      case inl h => simp[h] at nFS
+      case inr h => simp[h] at nFS
+    intro contra
+    simp[←Trail.decided_iff_sat_or_falsifed] at contra
+    contradiction
+  constructor
+  case left =>
+    exists l
+  case right =>
+    intro k kmem
+    have := not_sat_h k kmem
+    simp[Trail.sat_iff_not_false_or_u] at this
+    by_cases fals : t.falsifies k
+    right; exact fals
+    have := this fals
+    simp[←Trail.decided_iff_not_undecided] at this
+    left; exact this
+
+theorem not_decided_if_undecided {c : Clause}{t : Trail} :
+  c.undecidedBy t → ¬c.decidedBy t := by
+  simp[decidedBy, undecidedBy, satisfiedBy, falsifiedBy]
+  intro l lmem lu cu
+  constructor
+  case left =>
+    simp[Trail.not_decided_iff_undecided, ←Trail.decided_iff_sat_or_falsifed] at lu
+    exists l
+    simp[lmem, lu]
+  case right =>
+    simp[Trail.sat_iff_not_false_or_u]
+    intro k kmem knf
+    have : t.undecided k ∨ t.falsifies k := cu k kmem
+    simp[knf, Trail.not_decided_iff_undecided] at this
+    exact this
 
 def status (c : Clause)(t : Trail) : Status :=
   if c.satisfiedByB t then Status.sat
@@ -404,6 +455,88 @@ theorem fals_subset_fals {c : Clause}{t t' : Trail}:
   have : t.falsifies l := h l l_mem
   exact Trail.falsifies_subset_falsifies ss this
 
+theorem undecided_trail_incomplete {c : Clause}{t : Trail}:
+  c.undecidedBy t → ∃ n ∈ c.names, n ∉ t.names := by
+  simp[undecidedBy, Trail.undecided]
+  intro l hmem hlu h
+  exists l.getName
+  constructor
+  case left =>
+    simp[names]
+    exists l
+  case right =>
+    exact hlu
+
+theorem u_or_sat_not_fals {c : Clause}{t : Trail} :
+  c.undecidedBy t ∨ c.satisfiedBy t → ¬c.falsifiedBy t := by
+  simp[falsifiedBy, satisfiedBy, undecidedBy, Trail.false_iff_not_sat_or_u]
+  intro h
+  cases h
+  case inl u =>
+    obtain ⟨ l, lmem, lu ⟩ := u.left
+    exists l
+    constructor
+    case left => exact lmem
+    case right => intro; simp[←Trail.decided_iff_not_undecided, lu]
+  case inr sat =>
+    obtain ⟨ l, lmem, lsat ⟩ := sat
+    exists l
+    constructor
+    case left => exact lmem
+    case right => intro; contradiction
+
+theorem not_fals_u_or_sat {c : Clause}{t : Trail}:
+  c.falsifiedBy t → ¬(c.undecidedBy t ∨ c.satisfiedBy t) := by
+  simp[falsifiedBy, satisfiedBy, undecidedBy]
+  intro hf
+  constructor
+  case left =>
+    intro l lmem hlu
+    have : t.falsifies l := hf l lmem
+    have : t.decided l := Trail.decided_iff_sat_or_falsifed.mp (Or.inr this)
+    contradiction
+  case right =>
+    intro l lmem hlsat
+    have : t.falsifies l := hf l lmem
+    have := Trail.satisfies_ne_falsifies hlsat
+    contradiction
+
+theorem not_u_or_sat_fals {c : Clause}{t : Trail}:
+  ¬(c.undecidedBy t ∨ c.satisfiedBy t) → c.falsifiedBy t := by
+  simp[falsifiedBy, satisfiedBy, undecidedBy]
+  intro hu hsat l lmem
+  have hnsat : ¬t.satisfies l := hsat l lmem
+  simp[Trail.sat_iff_not_false_or_u] at hnsat
+  by_cases hf : t.falsifies l
+  case pos => exact hf
+  case neg =>
+    have hlu : t.undecided l := hnsat hf
+    have := hu l lmem hlu
+    obtain ⟨ k, kmem, kd, knf ⟩ := this
+    simp[←Trail.decided_iff_sat_or_falsifed] at kd
+    cases kd
+    case inl hsk =>
+      have : ¬t.satisfies k := hsat k kmem
+      contradiction
+    case inr hsf =>
+      contradiction
+
+theorem fals_iff_not_sat_or_u {c : Clause}{t : Trail}:
+  c.falsifiedBy t ↔ ¬(c.undecidedBy t ∨ c.satisfiedBy t)  := by
+  constructor
+  exact not_fals_u_or_sat
+  exact not_u_or_sat_fals
+
+theorem all_asssigned_decided {c : Clause}{t : Trail}:
+  (∀ n ∈ c.names, n ∈ t.names) → ¬c.undecidedBy t := by
+  simp [undecidedBy, Trail.undecided]
+  intro h l lmem lu
+  have nmem : l.getName ∈ c.names := by
+    simp[names]
+    exists l
+  have : l.getName ∈ t.names := h l.getName nmem
+  contradiction
+
 end Clause
 
 namespace Formula
@@ -469,7 +602,7 @@ theorem decidedBy_iff_is_decidedBy (f : Formula)(t : Trail) :
   simp[is_decidedBy, decidedBy]
 
 def undecidedBy (f : Formula)(t : Trail) : Prop :=
-  ¬ f.decidedBy t
+  (∃ c ∈ f, c.undecidedBy t) ∧ ∀ c ∈ f, c.undecidedBy t ∨ c.satisfiedBy t
 
 def is_undecidedBy (f : Formula)(t : Trail) : Bool :=
    ¬ (f.is_falsifiedBy t ∧ f.is_satisfiedBy t)
@@ -482,3 +615,26 @@ theorem fals_subset_fals {f : Formula}{t : Trail}{t' : Trail} :
   constructor
   exact c_mem
   exact Clause.fals_subset_fals ss c_fals
+
+
+theorem undecided_trail_incomplete {f : Formula}{t : Trail}:
+  f.undecidedBy t → f ≠ [] → ∃ n ∈ f.names, n ∉ t.names := by
+  intro h wf
+  simp[undecidedBy] at h ⊢
+  cases f with
+  | nil => simp at wf
+  | cons x xs =>
+    obtain ⟨ c, cmem, c_und ⟩ := h.1
+    have := Clause.undecided_trail_incomplete c_und
+    simp[names]
+    obtain ⟨ n, nmem, n_und ⟩ := this
+    exists n
+    constructor
+    case right => exact n_und
+    case left =>
+      simp at cmem
+      rcases cmem with heq | hmem
+      case inl =>
+        left; simp[←heq, nmem]
+      case inr =>
+        right; exists c

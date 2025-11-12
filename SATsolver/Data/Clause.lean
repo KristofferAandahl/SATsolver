@@ -35,6 +35,16 @@ def subclause (as : Clause)(bs : Clause) : Prop :=
 def entails (as : Clause)(bs : Clause) : Bool :=
   as.lits.all (fun a => bs.lits.contains a)
 
+def names (c : Clause) : List Nat :=
+  c.lits.map Lit.getName
+
+def ls := [Lit.pos 1, Lit.neg 2, Lit.neg 4]
+theorem ls_inv :
+  invariant ls := by
+    simp[ls, invariant, Lit.getName]
+
+#eval (⟨ls, ls_inv⟩ : Clause).names
+
 theorem entails_eq_sub (as : Clause)(bs : Clause) : as.entails bs = true ↔ as.subclause bs := by
   simp [entails, subclause]
 

@@ -218,6 +218,10 @@ def push (t : Trail)(a : AnnotatedLit)(wf : a.getName ∉ t.names) : Trail :=
     case right.right => exact t.inv
   ⟨ t', inv'⟩
 
+theorem trail_push {t : Trail}{a : AnnotatedLit}{wf : a.getName ∉ t.names} :
+  (t.push a wf).trail = a::t.trail := by
+  simp[push]
+
 theorem mem_push {t : Trail}{a b: AnnotatedLit}{wf : b.getName ∉ t.names} :
   a ∈ (t.push b wf).trail ↔ a = b ∨ a ∈ t.trail  := by
   simp[push]
@@ -278,6 +282,40 @@ theorem inv_new_head_same_name {a b : AnnotatedLit}{as : List AnnotatedLit} :
       constructor
       exact bname
       exact a_inv.2.2
+
+theorem names.mem_pop_ne_head {t : Trail}{n : Nat}{wf : t.names ≠ []} :
+  n = t.names.head wf → n ∉ t.pop.names ∧ ∀ m ∈ t.names, m ≠ n → m ∈ t.pop.names := by
+  intro head
+  rcases t with ⟨ trail, inv ⟩
+  cases trail
+  case nil => contradiction
+  case cons x xs =>
+    have ninv := inv.2.1
+    simp[pop, names] at *
+    constructor
+    case left =>
+      simp[head]
+      exact ninv
+    case right =>
+      constructor
+      case left =>
+        intro h
+        symm at head
+        contradiction
+      case right =>
+        intro b hmem hne
+        exists b
+
+
+theorem mem_pop_ne_head_names {t : Trail}{a : AnnotatedLit}{wf : t.trail ≠ []} :
+  a = t.trail.head wf → a.getName ∉ t.pop.names ∧ ∀ m ∈ t.names, m ≠ a.getName → m ∈ t.pop.names := by
+  intro h
+  have : t.names ≠ [] := by
+    intro contra
+    simp[names] at contra
+    contradiction
+  have : a.getName = t.names.head this := by simp[names, h]
+  exact names.mem_pop_ne_head this
 
 theorem replace_no_dup {α}[BEq α] {a b c: α}{as : List α} :
   a ∉ as → a ≠ c → a ∉ as.replace b c := by
