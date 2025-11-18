@@ -39,14 +39,55 @@ instance : DecidableRel Clause.unit := by
 
 def Clause.getunit (c :Clause)(t : Trail)(wf : c.unit t) : Lit :=
   let lopt := c.find? (fun l => t ¿ l)
-  have : lopt.isSome := by
+  have some : lopt.isSome := by
     simp only [Clause.unit] at wf
     obtain ⟨ l, hmem, hud, cCon ⟩ := wf
     simp[lopt]
     exists l
-  lopt.get this
+  lopt.get some
 
-instance : Undecided Trail Formula where
+
+theorem Clause.unit_ud {c : Clause}{t : Trail}{wf : c.unit t} :
+  t ¿ c.getunit t wf := by
+  induction c
+  case nil => simp[Clause.unit] at wf
+  case cons hd tl ih =>
+    by_cases ud : t ¿ hd
+    case pos => simp[Clause.getunit, ud]
+    case neg =>
+      have wftl : unit tl t := by
+        simp[unit, ud] at wf ⊢
+        obtain ⟨ a, amem, aud, hhda, hall ⟩ := wf
+        exists a
+      have := ih (wf := wftl)
+      have heq : getunit (hd :: tl) t wf = getunit tl t wftl := by
+        unfold getunit
+        simp[ud]
+      rw[←heq] at this
+      exact this
+
+theorem Clause.unit_mem {c : Clause}{t : Trail}{wf : c.unit t} :
+  c.getunit t wf ∈ c := by
+  induction c
+  case nil => simp[unit] at wf
+  case cons hd tl ih =>
+    by_cases ud : t ¿ hd
+    case pos => simp[Clause.getunit, ud]
+    case neg =>
+      have wftl : unit tl t := by
+        simp[unit, ud] at wf ⊢
+        obtain ⟨ a, amem, aud, hhda, hall ⟩ := wf
+        exists a
+      have := ih (wf := wftl)
+      have heq : getunit (hd :: tl) t wf = getunit tl t wftl := by
+        unfold getunit
+        simp[ud]
+      rw[←heq] at this
+      simp[this]
+
+
+
+  instance : Undecided Trail Formula where
   ud t f := ∃ c ∈ f, t¿c
 
 instance : DecidableRel (Undecided.ud (α := Trail) (β := Formula)) := by

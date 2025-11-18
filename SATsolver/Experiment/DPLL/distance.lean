@@ -23,8 +23,8 @@ def distance_partial (soFar stop : Nat) : Trail → Nat → Nat
       | (ALit.decided _) :: as, n+1 => distance_partial (soFar + 1 * 3 ^ n) stop as n
       | (ALit.deduced _) :: as, n+1 => distance_partial soFar stop as n
 
-def distance(t : Trail)(f : Formula)(_ : f ≠ []) : Nat :=
-  distance_internal 0 t.reverse f.names.eraseDups.length
+def distance(t : Trail)(v : Variables)(_ : v ≠ 0) : Nat :=
+  distance_internal 0 t.reverse v
 
 theorem extract_soFar {soFar n: Nat}{t : Trail}(x : Nat):
   distance_internal (soFar + x ) t n = soFar + distance_internal x t n := by
@@ -209,40 +209,41 @@ theorem head_subst{soFar n : Nat}{t y : Trail}{l j : Lit}:
   apply Nat.lt_add_right
   exact helper
 
-theorem distance_dec {l : Lit}{t : Trail}{f : Formula}{lud : t ¿ l}{wf : f ≠ []}:
-  f.names.eraseDups.length > t.length → distance (dec l t lud) f wf < distance t f wf:= by
+theorem distance_dec {l : Lit}{t : Trail}{v: Variables}{lud : t ¿ l}{wf : v ≠ 0}:
+  t.length < v → distance (dec l t lud) v wf < distance t v wf:= by
   intro h
   simp only [distance, dec, List.reverse_cons]
   apply distance_append
   simp[h]
 
-theorem distance_prop{t : Trail}{c : Clause}{pwf : c.unit t}{f : Formula}{wf : f ≠ []}:
-  f.names.eraseDups.length > t.length → distance (propogate t c pwf) f wf < distance t f wf:= by
+theorem distance_prop{t : Trail}{c : Clause}{pwf : c.unit t}{v: Variables}{wf : v ≠ 0}:
+  t.length < v → distance (propogate t c pwf) v wf < distance t v wf:= by
   intro h
   simp only [distance, propogate, List.reverse_cons]
   apply distance_append
   simp[h]
 
-theorem distance_bc{t : Trail}{bcwf : ∃ a ∈ t, a.decidedP}{f : Formula}{wf : f ≠ []}:
-  f.names.eraseDups.length > t.length → distance (backtrack t bcwf) f wf < distance t f wf := by
+theorem distance_bc{t : Trail}{bcwf : ∃ a ∈ t, a.decidedP}{v: Variables}{wf : v ≠ 0}{twf : t.wf}:
+  t.length ≤ v → distance (backtrack t bcwf twf) v wf < distance t v wf := by
   intro h
   obtain ⟨ hd, tl, a, heq, ha, hhd ⟩ := exists_split_on_prop ALit.decidedP t bcwf
   subst heq
-  have : backtrack (hd ++ a :: tl) bcwf = ALit.deduced (a.lit.negate)::tl := backtrack_lemma hhd ha
+  have : backtrack (hd ++ a :: tl) bcwf twf = ALit.deduced (a.lit.negate)::tl := backtrack_lemma hhd ha
   simp[this, distance]
-  have hle : tl.reverse.length < f.names.eraseDups.length := by
+  have hle : tl.reverse.length < v := by
     simp at h ⊢
-    have : tl.length + 1 < f.names.eraseDups.length := Nat.lt_of_add_left_lt h
-    exact Nat.lt_of_add_right_lt this
+    have : tl.length + 1 ≤ v := Nat.le_of_add_left_le h
+    exact Nat.lt_of_succ_le this
   rw[split_internal, split_internal]
   simp[distance_partial_zero]
   cases a
   case deduced => simp[ALit.decidedP] at ha
   case decided l =>
-    have : f.names.eraseDups.length - tl.length ≠ 0 := by
+    have : v - tl.length ≠ 0 := by
+      have : tl.length < (hd ++ ALit.decided l :: tl).length := by simp +arith
+      have := Nat.lt_of_lt_of_le this h
       apply Nat.ne_of_gt
-      simp at hle
-      exact Nat.sub_pos_of_lt hle
+      exact Nat.sub_pos_of_lt this
     simp only[ALit.lit]
     exact head_subst this
   exact Nat.le_of_lt hle

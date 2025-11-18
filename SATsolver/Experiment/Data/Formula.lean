@@ -65,13 +65,13 @@ instance : Membership Lit Formula where
 
 end Formula
 
-namespace variables
+abbrev Variables : Type := Nat
 
-abbrev variables : Type := Nat
+namespace Variables
 
 -- Checks that all the variables is in a formula
 -- and that the formula contains all the vars
-def wf (vs : variables)(f : Formula) : Prop :=
+def wf (vs : Variables)(f : Formula) : Prop :=
   (∀ n ∈ f.names, n ≤ vs) ∧ (∀ n ≤ vs, n ∈ f.names)
 
 instance : DecidableRel wf := by
