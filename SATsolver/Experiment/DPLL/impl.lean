@@ -3,9 +3,9 @@ import SATsolver.Experiment.DPLL.distance
 
 
 
-def internal (t : Trail)(f : Formula)(v : Variables)(vz : v ≠ 0)(wf : f.wf ∧ v.wf f)(twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names): Bool :=
+def internal (t : Trail)(f : Formula)(v : Variables)(vz : v ≠ 0)(wf : f.wf ∧ v.wf f)(twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names): Bool × Trail :=
   if sat : decide (t ⊨ f) then
-    true
+    (true, t)
   else if con : decide (t ⊭ f) then
     if anyDec : t.any ALit.decidedB then
       have bcwf : ∃ a ∈ t, a.decidedP := by
@@ -13,7 +13,7 @@ def internal (t : Trail)(f : Formula)(v : Variables)(vz : v ≠ 0)(wf : f.wf ∧
         obtain ⟨ a, amem, adec ⟩ := anyDec
         exists a
       internal (backtrack t bcwf twf.1) f v vz wf (bck_preserves_twf (tf := twf.2))
-    else false
+    else (false, t)
   else
     let copt := f.find? (fun c => c.unit t)
     if h : copt.isSome then
@@ -90,5 +90,7 @@ decreasing_by
   exact distance_dec this
 
 
-def DPLL(f : Formula)(v : Variables)(vz : v ≠ 0)(wf : f.wf ∧ v.wf f) :=
-  internal [] f v vz wf (by simp[Trail.wf, Trail.names])
+def DPLL(f : Formula)(v : Variables)(wf : f.wf ∧ v.wf f) :=
+  match f with
+  | [] => (true, [])
+  | hd::tl => internal [] (hd::tl) v (Variables.f_cons_ne_zero wf.2 (fwf := wf.1)) wf (by simp[Trail.wf, Trail.names])

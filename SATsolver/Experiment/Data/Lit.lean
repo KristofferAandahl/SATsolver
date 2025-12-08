@@ -13,16 +13,15 @@ instance : BEq Lit where
 instance : LawfulBEq Lit where
   rfl := by
     intro a
-    simp[BEq.beq]
+    simp only [BEq.beq]
     cases a
     all_goals simp
   eq_of_beq := by
     intro a b h
-    simp[BEq.beq] at h
+    simp only [BEq.beq] at h
     cases a <;> cases b
     case pos.pos | neg.neg =>
-      simp at h
-      simp[h]
+      simpa using h
     case pos.neg | neg.pos =>
       simp at h
 
@@ -40,18 +39,47 @@ def negate : Lit → Lit
   | pos n => neg n
   | neg n => pos n
 
+theorem negneg (l : Lit) :
+  l.negate.negate = l := by
+  simp[negate]
+  split
+  case h_1 x n heq =>
+    split at heq
+    case h_1 k m =>
+      have := congrArg negate heq
+      simp[negate] at this
+    case h_2 k m =>
+      have := congrArg negate heq
+      simp[negate] at this
+      rw[this]
+  case h_2 x n heq =>
+    split at heq
+    case h_1 k m =>
+      have := congrArg negate heq
+      simp[negate] at this
+      rw[this]
+    case h_2 k m =>
+      have := congrArg negate heq
+      simp[negate] at this
+
 def name : Lit → Nat
   | pos n | neg n => n
 
 theorem name_name_negate {l : Lit} :
   l.negate.name = l.name := by
-  simp[negate, name]
+  simp only [negate, name]
   cases l
   all_goals simp
 
 theorem shared_name {a b : Lit} :
   a.name = b.name → a = b ∨ a = b.negate := by
-  simp[name]
+  simp only [name]
   intro h
   cases a <;> cases b
   all_goals simp[h, negate]
+
+theorem neg_ineq{l : Lit} :
+  l ≠ l.negate := by
+  simp[negate]
+  cases l
+  all_goals simp

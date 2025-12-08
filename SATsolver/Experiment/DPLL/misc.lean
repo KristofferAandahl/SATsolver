@@ -24,5 +24,4 @@ theorem arith_helper {n : Nat} :
   induction n
   case zero => simp
   case succ n ih =>
-    rw[Nat.pow_succ, ←Nat.mul_assoc]
-    simp[ih]
+    simp[Nat.pow_succ, ←Nat.mul_assoc, ih]

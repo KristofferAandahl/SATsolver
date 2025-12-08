@@ -13,6 +13,28 @@ theorem Formula.ud_exCUd{f : Formula}{t : Trail}:
   cases f
   all_goals simp[Undecided.ud]
 
+theorem Trail.nil_ud{f : Formula}:
+  f ≠ [] → f.wf → ([] : Trail) ¿ f := by
+  intro h wf
+  obtain ⟨ c, tl, heq ⟩ := List.ne_nil_iff_exists_cons.mp h
+  subst heq
+  simp[Undecided.ud, Formula.wf, Clause.wf] at wf ⊢
+  have : c ≠ [] := wf.1.1.1
+  obtain ⟨ l, ls, heq ⟩ := List.ne_nil_iff_exists_cons.mp this
+  subst heq
+  left
+  constructor
+  case left =>
+    exists l
+    simp[Trail.names]
+  case right =>
+    intro k kmem
+    simp[Trail.names]
+
+
+
+
+
 theorem Formula.Clause.ud_exUnseen{f : Formula}{t : Trail}:
   t¿f → ∃ n ∈ f.names, t.unseen n := by
   simp [Undecided.ud, Formula.names]
@@ -219,7 +241,7 @@ theorem Variables.ud_not_nil{v : Variables}{t : Trail}{f : Formula}:
     exact Formula.mem_memClause_mem_names cmem lcn
   have vge : l.name ≤ v := vwf₁ l.name lfn
   have : 0 < l.name := by
-    have := (hall c cmem).2.2
+    have := (hall c cmem).1.2.2
     by_cases heq : l.name =0
     case pos => rw[heq] at lcn; contradiction
     case neg => simp[←Nat.ne_zero_iff_zero_lt, heq]
@@ -241,7 +263,7 @@ theorem Trail.ud_vars{t : Trail}{f : Formula}{v : Variables} :
     obtain ⟨ l, lmem, lud ⟩ :=cud.1
     exists l.name
     simp[lud]
-    have cwf : c.wf := fwf c cmem
+    have cwf : c.wf := (fwf c cmem).1
     simp[Clause.wf] at cwf
     by_cases heq : l.name =0
     case pos =>
@@ -266,3 +288,319 @@ theorem Trail.mem_vwf {t : Trail}{v : Variables}{f :Formula}:
   have := length_le_of_nodup_all_le twf.1 twf.2 this
   simp[names] at this
   exact this
+
+theorem Trail.con_cons_con{tl : Trail}{f : Formula}:
+  tl ⊭ f → ∀ hd, (hd ++ tl) ⊭ f := by
+  simp[Conflict.con, Trail.lits]
+  intro c cmem call hd
+  exists c
+  simp[cmem]
+  intro l lmem
+  have := call l lmem
+  simp[this]
+
+theorem Trail.ud_tl_ud {f : Formula}{hd : ALit}{tl : Trail}:
+  Trail.wf (hd::tl) → (hd::tl) ¿ f → tl ¿ f := by
+  simp[Undecided.ud, Trail.wf]
+  intro nodup nzero c cmem l lmem hname hall
+  exists c
+  simp[cmem]
+  constructor
+  case left =>
+    exists l
+    constructor
+    exact lmem
+    simp[Trail.names_cons] at hname
+    simp[hname]
+  case right =>
+    intro l lmem
+    have := hall l lmem
+    simp[Trail.names_cons] at this
+    cases this
+    case inl h => left; simp[h]
+    case inr h =>
+      simp[Conflict.con] at h ⊢
+      simp[Trail.lits_cons] at h
+      cases h
+      case inl h =>
+        have := congrArg Lit.name h
+        simp[Lit.name_name_negate] at this
+        left
+        rw[this]
+        simp[Trail.names, List.nodup_cons] at nodup
+        simp[Trail.names, ALit.name_name_lit]
+        exact nodup.1
+      case inr h =>
+        right; exact h
+
+theorem forall_and_right {α} {p: Prop}{q : α → Prop} :
+  (∃ (_ : α), True) → ((∀ (x : α), p ∧ q x) ↔ p ∧ ∀ (x : α), q x) := by
+  intro exi
+  constructor
+  case mp =>
+    intro h
+    constructor
+    case left =>
+      obtain ⟨ a ⟩ := exi
+      exact (h a).1
+    case right =>
+      intro a
+      exact (h a).2
+  case mpr =>
+    intro h x
+    constructor
+    case left => exact h.1
+    case right => exact h.2 x
+
+
+theorem Trail.cons_con {f : Formula}{hd : ALit}{tl : Trail}:
+  Trail.wf (hd::tl) → f.wf → (hd::tl) ⊭ f → tl ⊭ f ∨  tl ¿ f := by
+  intro twf wf h
+  simp[Conflict.con, Undecided.ud] at h ⊢
+  obtain ⟨ c, cmem, call ⟩ := h
+  simp[←exists_or]
+  exists c
+  simp[cmem]
+  have hname : hd.name ∉ tl.names := by
+    have := twf.1
+    simp[Trail.names] at this ⊢
+    exact this.1
+  by_cases hdmem : hd.lit.negate ∈ c
+  case pos =>
+    right
+    constructor
+    case left =>
+      exists hd.lit.negate
+      simp[Lit.name_name_negate, ALit.name_name_lit, hname, hdmem]
+    case right =>
+      intro l lmem
+      have := call l lmem
+      simp[Trail.lits] at this ⊢
+      cases this
+      case inl h =>
+        have := congrArg Lit.name h
+        simp[Lit.name_name_negate, ALit.name_name_lit] at this
+        simp[this, hname]
+      case inr h => simp[h]
+  case neg =>
+    left
+    intro l lmem
+    have := call l lmem
+    simp[Trail.lits] at this ⊢
+    cases this
+    case inl h =>
+        have := congrArg Lit.negate h
+        simp[Lit.negneg] at this
+        rw[this] at lmem
+        contradiction
+    case inr h => exact h
+
+theorem Trail.ud_append {f : Formula}{hd tl : Trail}:
+  Trail.wf (hd ++ tl) → (hd ++ tl) ¿ f → hd ¿ f ∧ tl ¿ f := by
+  intro twf hud
+  simp[Undecided.ud] at hud ⊢
+  obtain ⟨ c, cmem, lh, call ⟩ := hud
+  obtain ⟨ l, lmem, lname ⟩ := lh
+  constructor
+  case left =>
+    exists c
+    constructor
+    case left => exact cmem
+    case right =>
+      constructor
+      case left =>
+        exists l
+        constructor
+        case left => exact lmem
+        case right =>
+          simp [Trail.names] at lname ⊢
+          intro a amem
+          exact lname.1 a amem
+      case right =>
+        intro l lmem
+        have := call l lmem
+        simp [Conflict.con] at this ⊢
+        cases this
+        case inl lh => left; simp[Trail.names] at lh ⊢; exact lh.1
+        case inr rh =>
+          simp[Trail.lits] at rh ⊢
+          cases rh
+          case inl lh => right; exact lh
+          case inr rh =>
+            left
+            simp[Trail.wf, Trail.names, List.nodup_append] at twf
+            have : l.negate ∈ tl.lits := by
+              simp[Trail.lits]; exact rh
+            have : l.negate.name ∈ tl.names := Trail.mem_lits_mem_names this
+            rw[Lit.name_name_negate] at this
+            simp[Trail.names] at this ⊢
+            obtain ⟨ a, amem, heq ⟩ := this
+            intro a1 a1mem
+            have := twf.1.2.2 a1 a1mem a amem
+            rw[heq] at this
+            exact this
+  case right =>
+    exists c
+    constructor
+    case left => exact cmem
+    case right =>
+      constructor
+      case left =>
+        exists l
+        constructor
+        case left => exact lmem
+        case right =>
+          simp [Trail.names] at lname ⊢
+          intro a amem
+          exact lname.2 a amem
+      case right =>
+        intro l lmem
+        have := call l lmem
+        simp [Conflict.con] at this ⊢
+        cases this
+        case inl lh => left; simp[Trail.names] at lh ⊢; exact lh.2
+        case inr rh =>
+          simp[Trail.lits] at rh ⊢
+          cases rh
+          case inr rh => right; exact rh
+          case inl lh =>
+            left
+            simp[Trail.wf, Trail.names, List.nodup_append] at twf
+            have : l.negate ∈ hd.lits := by
+              simp[Trail.lits]; exact lh
+            have : l.negate.name ∈ hd.names := Trail.mem_lits_mem_names this
+            rw[Lit.name_name_negate] at this
+            simp[Trail.names] at this ⊢
+            obtain ⟨ a, amem, heq ⟩ := this
+            intro a1 a1mem
+            have := twf.1.2.2 a amem a1 a1mem
+            rw[heq] at this
+            intro contra
+            apply this
+            symm
+            exact contra
+
+def Trail.deduction_wf (f : Formula) : Trail → Prop
+  | [] => True
+  | ALit.deduced l :: tl => (∀ (hd : Trail),
+      (hd ++ (ALit.decided l.negate :: tl) ⊭ f) ∨ (hd ++ (ALit.decided l.negate :: tl) ¿ f) ∨
+      (hd ++ (ALit.deduced l.negate :: tl) ⊭ f) ∨ (hd ++ (ALit.deduced l.negate :: tl) ¿ f)
+    ) ∧
+    Trail.deduction_wf f tl
+  | ALit.decided _ :: tl => Trail.deduction_wf f tl
+
+
+theorem Trail.lit_type_ag_con {l : Lit}{tl : Trail}{f : Formula}:
+  ALit.decided l ::tl ⊭ f ↔ ALit.deduced l ::tl ⊭ f := by
+  simp[Conflict.con]
+  constructor
+  all_goals
+  intro h
+  obtain ⟨ c, ch ⟩ := h
+  exists c
+
+theorem Trail.lit_type_ag_ud {l : Lit}{tl : Trail}{f : Formula}:
+  ALit.decided l ::tl ¿  f ↔ ALit.deduced l ::tl ¿ f := by
+  simp[Undecided.ud]
+  constructor
+  all_goals
+  intro h
+  obtain ⟨ c, ch ⟩ := h
+  exists c
+
+theorem Trail.no_sat {hd : ALit}{tl : Trail}{f : Formula}:
+  Trail.wf (hd::tl) → hd::tl ⊭ f ∧ hd.negate::tl ⊭ f → ∀ hd, Trail.wf (hd++tl) → hd ++ tl ⊭ f ∨ hd ++ tl ¿ f := by
+  intro twf h hd' twf'
+  simp[Conflict.con, Undecided.ud] at h ⊢
+  obtain ⟨ h1, h2 ⟩ := h
+  obtain ⟨ c1, c1mem, c1hd ⟩ := h1
+  obtain ⟨ c2, c2mem, c2hdn ⟩ := h2
+  by_cases hmem : hd.lit ∈ hd'.lits
+  case pos =>
+    left
+    exists c1
+    constructor
+    case left => exact c1mem
+    case right =>
+      intro l lmem
+      have := c1hd l lmem
+      simp[Trail.lits] at this hmem ⊢
+      cases this
+      case inl lh => left; rw[lh]; simp[hmem]
+      case inr rh => right; exact rh
+  case neg =>
+    by_cases hnmem : hd.negate.lit ∈ hd'.lits
+    case pos =>
+      left
+      exists c2
+      constructor
+      case left => exact c2mem
+      case right =>
+        intro l lmem
+        have := c2hdn l lmem
+        simp[Trail.lits] at this hnmem ⊢
+        cases this
+        case inl lh => left; rw[lh]; simp[hnmem]
+        case inr rh => right; exact rh
+    case neg =>
+      by_cases hdc2 : hd.lit ∈ c2
+      case pos =>
+        right
+        exists c2
+        constructor
+        case left => exact c2mem
+        case right =>
+          constructor
+          case left =>
+            exists hd.lit
+            simp[hdc2, ALit.name_name_lit]
+            rw[←ALit.name_name_lit, ←Trail.mem_lits_names_eq]
+            simp
+            have := Trail.wf_hd twf
+            constructor
+            case left =>
+              have : ¬hd.lit ∈ tl.lits := by
+                intro contra
+                have := Trail.mem_lits_mem_names contra
+                simp[ALit.name_name_lit] at this
+                contradiction
+              simp[Trail.lits_append, hmem, this]
+            case right =>
+              have : ¬hd.lit.negate ∈ tl.lits := by
+                intro contra
+                have := Trail.mem_lits_mem_names contra
+                simp[Lit.name_name_negate, ALit.name_name_lit] at this
+                contradiction
+              simp[Trail.lits_append, this]
+              simp[←ALit.lit_negate_negate_lit, hnmem]
+          case right =>
+            intro l lmem
+            have hnmem := Trail.mem_lits_mem_names (c2hdn l lmem)
+            have := Trail.names_cons hd.negate tl
+            simp[this] at hnmem
+
+
+
+
+
+  by_cases heq : c1 = c2
+  case pos =>
+    subst heq
+    exists c1
+    simp[c1mem]
+    intro l lmem
+    have h1 := c1hd l lmem
+    have h2 := c2hdn l lmem
+    simp[Trail.lits] at h1 h2 ⊢
+    cases h1
+    case inl heq =>
+      simp[heq, ALit.lit_negate_negate_lit, Lit.neg_ineq] at h2
+      have := twf.1
+      simp[Trail.names] at this
+      obtain ⟨ a, ah ⟩ := h2
+      have := this.1 a ah.1
+      have := congrArg Lit.name ah.2
+      simp[ALit.name_name_lit] at this
+      contradiction
+    case inr h => exact h
+  case neg =>

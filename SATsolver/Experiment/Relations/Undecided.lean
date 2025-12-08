@@ -87,8 +87,8 @@ theorem Clause.unit_mem {c : Clause}{t : Trail}{wf : c.unit t} :
 
 
 
-  instance : Undecided Trail Formula where
-  ud t f := ∃ c ∈ f, t¿c
+instance : Undecided Trail Formula where
+ud t f := ∃ c ∈ f, t¿c
 
 instance : DecidableRel (Undecided.ud (α := Trail) (β := Formula)) := by
   intro a b

@@ -15,7 +15,27 @@ instance : Coe ALit Lit where
 
 def negate : ALit → ALit
   | decided l => decided l.negate
-  | deduced l  => decided l.negate
+  | deduced l  => deduced l.negate
+
+theorem negneg {a : ALit} :
+  a.negate.negate = a := by
+  simp[negate]
+  split
+  case h_1 x l heq =>
+    split at heq
+    case h_1 x1 l1 =>
+      simp at heq
+      simp[←heq, Lit.negneg]
+    case h_2 x1 l1 =>
+      simp at heq
+  case h_2 x l heq =>
+    split at heq
+    case h_1 x1 l1 =>
+      simp at heq
+    case h_2 =>
+      simp at heq
+      simp[←heq, Lit.negneg]
+
 
 def decidedP : ALit → Prop
   | decided _ => True
@@ -58,4 +78,10 @@ theorem name_name_lit {a : ALit} :
   simp only [name, lit, Lit.name]
   rcases a with ⟨ l ⟩ | ⟨ l ⟩
   all_goals cases l
+  all_goals simp
+
+theorem lit_negate_negate_lit {a : ALit} :
+  a.negate.lit = a.lit.negate := by
+  simp[ALit.negate, ALit.lit, Lit.negate]
+  cases a
   all_goals simp

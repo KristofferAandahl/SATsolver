@@ -15,7 +15,7 @@ theorem dec_preserves_wf{l : Lit}{t : Trail}{lud : t ¿ l}{f : Formula}
       simp[Formula.wf, Clause.wf] at fwf
       simp[Formula.names] at lmem
       obtain ⟨ c, cmem, cname ⟩ := lmem
-      simp[←contra, (fwf c cmem).2.2] at cname
+      simp[←contra, (fwf c cmem).1.2.2] at cname
     simp[Trail.wf, dec, Trail.names_cons, ALit.name, lud, twf.1.1, twf.1.2, this]
   case right =>
     intro n nmem
