@@ -99,3 +99,19 @@ instance : DecidableRel (Undecided.ud (α := Trail) (β := Formula)) := by
 def Formula.ud_iff_exists_csUD {f : Formula}{t : Trail} :
   t ¿ f ↔ ∃ c ∈ f, t ¿ c := by
   simp[Undecided.ud]
+
+
+theorem ud_comm {hd  tl : Trail}{f : Formula}:
+  hd++tl ¿ f ↔ tl ++ hd ¿ f := by
+  simp[Undecided.ud]
+  constructor
+  case mp =>
+    intro h
+    obtain ⟨ c , cmem, ch ⟩ := h
+    simp[Trail.mem_names_comm_lit, concflict_comm_lit]
+    exists c
+  case mpr =>
+    intro h
+    simp[Trail.mem_names_comm_lit, concflict_comm_lit] at h
+    obtain ⟨ c , cmem, ch ⟩ := h
+    exists c

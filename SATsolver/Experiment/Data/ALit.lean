@@ -80,8 +80,18 @@ theorem name_name_lit {a : ALit} :
   all_goals cases l
   all_goals simp
 
+theorem name_name_negate {a : ALit} :
+  a.negate.name = a.name := by
+  simp[name, negate]
+  cases a
+  all_goals simp[Lit.name_name_negate]
+
 theorem lit_negate_negate_lit {a : ALit} :
   a.negate.lit = a.lit.negate := by
   simp[ALit.negate, ALit.lit, Lit.negate]
   cases a
   all_goals simp
+
+theorem negation_comm {l : Lit}:
+  (ALit.decided l).negate = ALit.decided (l.negate) := by
+  simp[ALit.negate]

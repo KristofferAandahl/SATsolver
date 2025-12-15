@@ -32,9 +32,6 @@ theorem Trail.nil_ud{f : Formula}:
     simp[Trail.names]
 
 
-
-
-
 theorem Formula.Clause.ud_exUnseen{f : Formula}{t : Trail}:
   t¿f → ∃ n ∈ f.names, t.unseen n := by
   simp [Undecided.ud, Formula.names]
@@ -299,6 +296,41 @@ theorem Trail.con_cons_con{tl : Trail}{f : Formula}:
   have := call l lmem
   simp[this]
 
+theorem Trail.con_tl_con_or_ud {f : Formula}{hd : ALit}{tl : Trail}:
+  Trail.wf (hd::tl) → hd::tl ⊭ f → tl ⊭ f ∨ tl ¿ f := by
+  intro twf h
+  simp[Conflict.con, Undecided.ud] at h ⊢
+  obtain ⟨ c, cmem,  call ⟩ := h
+  simp[←exists_or]
+  exists c
+  simp[cmem]
+  by_cases h : (∀ (l : Lit), l ∈ c → l.negate ∈ tl.lits)
+  case pos => left; exact h
+  case neg =>
+    right
+    simp at h
+    obtain ⟨ x, xmem ,xh ⟩ := h
+    have := call x xmem
+    simp[Trail.lits_cons, xh] at this
+    constructor
+    case left =>
+      exists x
+      have := congrArg Lit.name this
+      simp[Lit.name_name_negate, ALit.name_name_lit] at this
+      have twfhd := Trail.wf_hd twf
+      simp[xmem, this, twfhd]
+    case right =>
+      intro l lmem
+      have := call l lmem
+      simp[Trail.lits_cons] at this
+      cases this
+      case inl lh =>
+        have := congrArg Lit.name lh
+        simp[Lit.name_name_negate, ALit.name_name_lit] at this
+        have twfhd := Trail.wf_hd twf
+        simp[this, twfhd]
+      case inr rh => right; exact rh
+
 theorem Trail.ud_tl_ud {f : Formula}{hd : ALit}{tl : Trail}:
   Trail.wf (hd::tl) → (hd::tl) ¿ f → tl ¿ f := by
   simp[Undecided.ud, Trail.wf]
@@ -351,6 +383,16 @@ theorem forall_and_right {α} {p: Prop}{q : α → Prop} :
     constructor
     case left => exact h.1
     case right => exact h.2 x
+
+theorem for_all_or {α}{p q : α → Prop} :
+  (∀ α, p α) ∨ (∀ α, q α) → (∀ α, p α ∨ q α)  := by
+    intro h
+    intro a
+    cases h
+    case inl lh => simp[lh a]
+    case inr rh => simp[rh a]
+
+
 
 
 theorem Trail.cons_con {f : Formula}{hd : ALit}{tl : Trail}:
@@ -482,7 +524,7 @@ theorem Trail.ud_append {f : Formula}{hd tl : Trail}:
 
 def Trail.deduction_wf (f : Formula) : Trail → Prop
   | [] => True
-  | ALit.deduced l :: tl => (∀ (hd : Trail),
+  | ALit.deduced l :: tl => (∀ (hd : Trail), Trail.wf (hd++ALit.deduced l :: tl) →
       (hd ++ (ALit.decided l.negate :: tl) ⊭ f) ∨ (hd ++ (ALit.decided l.negate :: tl) ¿ f) ∨
       (hd ++ (ALit.deduced l.negate :: tl) ⊭ f) ∨ (hd ++ (ALit.deduced l.negate :: tl) ¿ f)
     ) ∧
@@ -578,29 +620,115 @@ theorem Trail.no_sat {hd : ALit}{tl : Trail}{f : Formula}:
             have hnmem := Trail.mem_lits_mem_names (c2hdn l lmem)
             have := Trail.names_cons hd.negate tl
             simp[this] at hnmem
+            simp[Lit.name_name_negate, ALit.name_name_negate] at hnmem
+            cases hnmem
+            case inl lh =>
+              left
+              simp[Trail.names_append, lh]
+              have := Trail.wf_hd twf
+              simp[this]
+              simp[←ALit.name_name_lit, ←Trail.mem_lits_names_eq]
+              simp[hmem, ←ALit.lit_negate_negate_lit, hnmem]
+            case inr rh =>
+              have lnegmem := c2hdn l lmem
+              simp[Trail.lits_cons] at lnegmem
+              have : ¬ l.negate = hd.negate.lit := by
+                intro contra
+                have := congrArg Lit.negate contra
+                simp[Lit.negneg] at this
+                rw[this] at rh
+                simp[Lit.name_name_negate, ALit.name_name_lit, ALit.name_name_negate] at rh
+                have := Trail.wf_hd twf
+                contradiction
+              simp[this] at lnegmem
+              right
+              simp[Trail.lits_append]
+              right
+              exact lnegmem
+      case neg =>
+        have : ∀ (l : Lit), l ∈ c2 → l.negate ∈ lits tl := by
+          intro l lmem
+          have := c2hdn l lmem
+          simp[Trail.lits_cons] at this
+          cases this
+          case inl lh =>
+            have lh := congrArg Lit.negate lh
+            simp[ALit.lit_negate_negate_lit , Lit.negneg] at lh
+            rw[lh] at lmem
+            contradiction
+          case inr rh =>
+            exact rh
+        left
+        exists c2
+        simp[c2mem]
+        intro l lmem
+        simp[Trail.lits_append]
+        right
+        exact this l lmem
 
 
+theorem con_or_ud {t : Trail}{f : Formula} :
+  t ⊭ f ∨ t ¿ f ↔ ∃ c ∈ f, ∀ l ∈ c, l.negate ∈ t.lits ∨ l.name ∉ t.names := by
+  constructor
+  case mp =>
+    intro h
+    simp[Conflict.con, Undecided.ud] at h
+    rw[←exists_or] at h
+    obtain ⟨ c, ch⟩ := h
+    cases ch
+    case inl ch =>
+      exists c
+      simp[ch.1]
+      intro l lmem
+      simp[ ch.2 l lmem]
+    case inr ch =>
+      exists c
+      simp[ch.1]
+      intro l lmem
+      have := ch.2.2 l lmem
+      rw[or_comm]
+      simp[this]
+  case mpr =>
+    intro h
+    obtain ⟨ c, cmem, ch ⟩ := h
+    simp[Conflict.con, Undecided.ud, ← exists_or]
+    exists c
+    simp[cmem]
+    by_cases ud : (∃ l', l' ∈ c ∧ ¬l'.name ∈ t.names)
+    case pos =>
+      right
+      simp[ud]
+      intro l lmem
+      have := ch l lmem
+      rw[or_comm]
+      simp[this]
+    case neg =>
+      simp at ud
+      left
+      intro l lmem
+      have namemem := ud l lmem
+      have := ch l lmem
+      simp[namemem] at this
+      exact this
 
-
-
-  by_cases heq : c1 = c2
-  case pos =>
-    subst heq
-    exists c1
-    simp[c1mem]
-    intro l lmem
-    have h1 := c1hd l lmem
-    have h2 := c2hdn l lmem
-    simp[Trail.lits] at h1 h2 ⊢
-    cases h1
-    case inl heq =>
-      simp[heq, ALit.lit_negate_negate_lit, Lit.neg_ineq] at h2
-      have := twf.1
-      simp[Trail.names] at this
-      obtain ⟨ a, ah ⟩ := h2
-      have := this.1 a ah.1
-      have := congrArg Lit.name ah.2
-      simp[ALit.name_name_lit] at this
-      contradiction
-    case inr h => exact h
-  case neg =>
+theorem non_deduced {t : Trail}{f : Formula} :
+  t.wf → (∀ a ∈ t, a.deducedP) → Trail.deduction_wf f t → ∀ t', (∃ l ∈ Trail.lits t', l.negate ∈ t.lits) → t' ⊭ f ∨ t' ¿ f:= by
+  intro twf allded wf t' lh
+  obtain ⟨ l, lmem, lneg ⟩ := lh
+  simp[Trail.lits] at lneg
+  obtain ⟨ a, amem, heq ⟩ := lneg
+  induction t
+  case nil => simp at amem
+  case cons x xs ih =>
+    simp at amem
+    cases amem
+    case inl lh =>
+      subst lh
+      cases a
+      case decided k =>
+        have := allded (ALit.decided k) (by simp)
+        simp[ALit.deducedP] at this
+      case deduced k =>
+        simp[Trail.deduction_wf] at wf
+        have := wf.1 [] twf
+        simp at this

@@ -118,3 +118,23 @@ theorem wf_hd {hd : ALit}{tl : Trail}:
   simp[wf, names_cons] at h
   have := h.1.1
   contradiction
+
+theorem mem_names_comm {a : ALit}{hd tl : Trail}:
+  a.name ∈ Trail.names (hd ++ tl) ↔ a.name ∈ Trail.names (tl ++ hd) := by
+  simp[Trail.names]
+  constructor
+  all_goals
+  intro h
+  cases h
+  case inl lh => right; exact lh
+  case inr rh => left; exact rh
+
+theorem mem_names_comm_lit {a : Lit}{hd tl : Trail}:
+  a.name ∈ Trail.names (hd ++ tl) ↔ a.name ∈ Trail.names (tl ++ hd) := by
+  simp[Trail.names]
+  constructor
+  all_goals
+  intro h
+  cases h
+  case inl lh => right; exact lh
+  case inr rh => left; exact rh

@@ -70,7 +70,7 @@ theorem ppg_deduction_inv {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
   have := ppg_negation_con this cmem
   constructor
   case left =>
-    intro hd
+    intro hd wf
     left
     exact (Trail.con_cons_con this) hd
   case right =>
