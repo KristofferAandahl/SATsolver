@@ -1,4 +1,5 @@
 import SATsolver.Experiment.Relations.Theories
+import SATsolver.Experiment.DPLL.completeness
 
 def propogate (t : Trail)(c : Clause)(wf : c.unit t): Trail :=
   let l := c.getunit t wf
@@ -70,8 +71,74 @@ theorem ppg_deduction_inv {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
   have := ppg_negation_con this cmem
   constructor
   case left =>
-    intro hd wf
+    intro hd wf lmem
     left
-    exact (Trail.con_cons_con this) hd
+    simp[Conflict.con] at this ⊢
+    obtain ⟨ c, cmem, call ⟩ := this
+    exists c
+    constructor
+    case left => exact cmem
+    case right =>
+      intro j jmem
+      have := call j jmem
+      simp[Trail.lits] at this ⊢
+      cases this
+      case inl lh =>
+        simp[ALit.lit] at lh
+        left
+        have := Trail.mem_lits_exists_mem lmem
+        simp[lh, this]
+      case inr rh =>
+        right; exact rh
   case right =>
     exact h
+
+
+theorem ppg_completeness {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
+  (t.wf ∧ ∀ n ∈ t.names, n ∈ f.names) → f.wf → Completenes.invariant t f → c ∈ f → Completenes.invariant (propogate t c cu)  f := by
+  intro twf fwf h cmem
+  have ppgwf := ppg_preserves_wf cmem (twf := twf) (fwf := fwf) (cu := cu)
+  let l := c.getunit t cu
+  have : propogate t c cu = ALit.deduced l :: t := by
+    simp[propogate, l]
+  rw[this] at ppgwf ⊢
+  have := ppg_negation_con this cmem
+  simp[Completenes.invariant]
+  constructor
+  case left =>
+    intro hd hdwf hsat contra
+    simp[Conflict.con, Satisfies.sat] at this hsat
+    obtain ⟨ c, cmem, call ⟩ := this
+    obtain ⟨ j, jc, jt ⟩ := hsat c cmem
+    have :=  call j jc
+    simp[Trail.lits] at this
+    cases this
+    case inl lh =>
+      simp[ALit.lit] at lh
+      have lh := congrArg Lit.negate lh
+      simp[Lit.negneg] at lh
+      subst lh
+      simp[Trail.lits_append] at jt
+      cases jt
+      case inl lh =>
+        have := Trail.lit_and_litn_not_wf lh contra
+        have := (Trail.wf_append hdwf).1
+        contradiction
+      case inr rh =>
+        have contra : l.negate ∈ (hd++t).lits := by
+          simp[Trail.lits_append]
+          left; exact contra
+        have rh : l ∈ (hd++t).lits := by
+          simp[Trail.lits_append]
+          right; exact rh
+        have := Trail.lit_and_litn_not_wf rh contra
+        contradiction
+    case inr rh =>
+      obtain ⟨  a, amem, heq ⟩ := rh
+      have := Trail.mem_mem_lits amem
+      rw[heq] at this
+      have : j.negate ∈ (hd++t).lits := by
+        simp[Trail.lits_append]
+        right; exact this
+      have := Trail.lit_and_litn_not_wf jt this
+      contradiction

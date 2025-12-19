@@ -524,13 +524,25 @@ theorem Trail.ud_append {f : Formula}{hd tl : Trail}:
 
 def Trail.deduction_wf (f : Formula) : Trail → Prop
   | [] => True
-  | ALit.deduced l :: tl => (∀ (hd : Trail), Trail.wf (hd++ALit.deduced l :: tl) →
-      (hd ++ (ALit.decided l.negate :: tl) ⊭ f) ∨ (hd ++ (ALit.decided l.negate :: tl) ¿ f) ∨
-      (hd ++ (ALit.deduced l.negate :: tl) ⊭ f) ∨ (hd ++ (ALit.deduced l.negate :: tl) ¿ f)
-    ) ∧
+  | ALit.deduced l :: tl => (∀ (hd : Trail), Trail.wf (hd ++ tl) → l.negate ∈ hd.lits →
+      (hd ++ tl ⊭ f) ∨ (hd ++ tl) ¿ f) ∧
     Trail.deduction_wf f tl
   | ALit.decided _ :: tl => Trail.deduction_wf f tl
 
+theorem Trail.dedwf_cons :
+  Trail.deduction_wf f (a::tl) → Trail.deduction_wf f tl := by
+  intro h
+  cases a
+  case decided => simpa [Trail.deduction_wf] using h
+  case deduced => exact h.2
+
+theorem Trail.dedwf_append :
+  Trail.deduction_wf f (hd++tl) → Trail.deduction_wf f tl := by
+  intro h
+  induction hd
+  case nil => simpa using h
+  case cons hd1 hd2 ih =>
+    exact ih (Trail.dedwf_cons h)
 
 theorem Trail.lit_type_ag_con {l : Lit}{tl : Trail}{f : Formula}:
   ALit.decided l ::tl ⊭ f ↔ ALit.deduced l ::tl ⊭ f := by
@@ -711,6 +723,60 @@ theorem con_or_ud {t : Trail}{f : Formula} :
       simp[namemem] at this
       exact this
 
+
+theorem mem_sat {t : Trail}{a : ALit}{f : Formula}:
+  a ∈ t → (t ⊨ f ↔ a::t ⊨ f) := by
+  intro amem
+  simp[Satisfies.sat]
+  constructor
+  case mp =>
+    intro h c cmem
+    obtain ⟨  l, lc, lt ⟩ := h c cmem
+    exists l
+    constructor
+    case left => exact lc
+    case right =>
+      simp[Trail.lits] at lt ⊢
+      right; exact lt
+  case mpr =>
+    intro h c cmem
+    obtain ⟨ l, lc, lt ⟩ := h c cmem
+    exists l
+    constructor
+    case left => exact lc
+    case right =>
+      simp[Trail.lits] at lt ⊢
+      cases lt
+      case inl lh => exists a; simp[amem, lh]
+      case inr rh => exact rh
+
+theorem extract_mem {α} {l : List α}{a : α}:
+  a ∈ l → ∃ (k : List α), a ∉ k → ∀ (b : α), b ≠ a → (b ∈ l ↔ b ∈ k) := by
+  intro mem
+  induction l
+  case nil => simp at mem
+  case cons x xs ih =>
+    cases mem
+    case head =>
+      exists xs
+      intro nmem b neq
+      simp[neq]
+    case tail hmem =>
+      have := ih hmem
+      obtain ⟨ k, kh⟩ := this
+      exists x::k
+      intro nmem b heq
+      have : a ∉ k := by
+        intro contra
+        apply nmem
+        simp[contra]
+      have := kh this b heq
+      simp[this]
+
+
+
+
+/-
 theorem non_deduced {t : Trail}{f : Formula} :
   t.wf → (∀ a ∈ t, a.deducedP) → Trail.deduction_wf f t → ∀ t', (∃ l ∈ Trail.lits t', l.negate ∈ t.lits) → t' ⊭ f ∨ t' ¿ f:= by
   intro twf allded wf t' lh
@@ -732,3 +798,4 @@ theorem non_deduced {t : Trail}{f : Formula} :
         simp[Trail.deduction_wf] at wf
         have := wf.1 [] twf
         simp at this
+-/

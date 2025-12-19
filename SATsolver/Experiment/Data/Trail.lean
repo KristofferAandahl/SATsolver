@@ -13,6 +13,10 @@ theorem mem_mem_lits{t : Trail}{a : ALit} :
   intro h
   exists a
 
+theorem mem_lits_exists_mem {t : Trail}{l : Lit} :
+  l ∈ t.lits → ∃ a ∈ t, a.lit = l := by
+  simp[lits]
+
 theorem lits_append(hd tl : Trail):
   (hd++tl).lits = hd.lits++tl.lits := by
   simp[lits]
@@ -138,3 +142,71 @@ theorem mem_names_comm_lit {a : Lit}{hd tl : Trail}:
   cases h
   case inl lh => right; exact lh
   case inr rh => left; exact rh
+
+theorem lit_and_litn_not_wf{l : Lit}{t : Trail} :
+  l ∈ t.lits → l.negate ∈ t.lits → ¬ t.wf := by
+  intro lmem lnmem
+  simp[Trail.wf]
+  intro nodup
+  induction t
+  case nil => simp[Trail.lits] at lmem
+  case cons x xs ih =>
+    simp[Trail.lits] at lmem lnmem
+    rcases lmem <;> rcases lnmem
+    case inl.inl heq1 heq2 =>
+      rw[←heq2] at heq1
+      simp[Lit.neg_ineq] at heq1
+    case inl.inr heq hmem =>
+      obtain ⟨ b, bmem, heq2 ⟩ := hmem
+      simp[Trail.names] at nodup
+      have hneq := nodup.1 b bmem
+      have := congrArg Lit.name heq2
+      simp[ALit.name_name_lit] at this
+      rw[this] at hneq
+      have := congrArg Lit.name heq
+      simp[ALit.name_name_lit] at this
+      rw[←this] at hneq
+      simp[Lit.name_name_negate] at hneq
+    case inr.inl hmem heq =>
+      obtain ⟨ b, bmem, heq2 ⟩ := hmem
+      simp[Trail.names] at nodup
+      have hneq := nodup.1 b bmem
+      have := congrArg Lit.name heq2
+      simp[ALit.name_name_lit] at this
+      rw[this] at hneq
+      have := congrArg Lit.name heq
+      simp[ALit.name_name_lit] at this
+      rw[←this] at hneq
+      simp[Lit.name_name_negate] at hneq
+    case inr.inr hmem1 hmem2 =>
+      simp[Trail.lits] at ih
+      obtain ⟨ a, amem, heq1 ⟩ := hmem1
+      obtain ⟨ b, bmem, heq2 ⟩ := hmem2
+      have := ih a amem heq1 b bmem heq2 (List.nodup_cons.mp nodup).2
+      simp [Trail.names] at this ⊢
+      right; exact this
+
+
+
+theorem lit_of_wf{l : Lit}{t : Trail} :
+  l.name ∈ t.names → t.wf →
+  l ∈ t.lits ∧ l.negate ∉ t.lits ∨ l ∉ t.lits ∧ l.negate ∈ t.lits := by
+  intro namemem twf
+  have := Trail.mem_lits_names_eq.mpr namemem
+  cases this
+  case inl lh =>
+    left
+    constructor
+    case left => exact lh
+    case right =>
+      intro contra
+      have := lit_and_litn_not_wf lh contra
+      contradiction
+  case inr rh =>
+    right
+    constructor
+    case left =>
+      intro contra
+      have := lit_and_litn_not_wf contra rh
+      contradiction
+    case right => exact rh
