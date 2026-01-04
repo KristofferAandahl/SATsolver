@@ -142,3 +142,70 @@ theorem ppg_completeness {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
         right; exact this
       have := Trail.lit_and_litn_not_wf jt this
       contradiction
+  case right => exact h
+
+theorem ppg_completeness2 {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
+  (t.wf ∧ ∀ n ∈ t.names, n ∈ f.names) → f.wf → Completenes.inv t f → c ∈ f → Completenes.inv (propogate t c cu)  f := by
+  intro twf fwf hcom cmem
+  have ppgwf := ppg_preserves_wf cmem (twf := twf) (fwf := fwf) (cu := cu)
+  let l := c.getunit t cu
+  have : propogate t c cu = ALit.deduced l :: t := by
+    simp[propogate, l]
+  rw[this] at ppgwf ⊢
+  have := ppg_negation_con this cmem
+  simp[Completenes.inv]
+  constructor
+  case left => exact hcom
+  case right =>
+    intro hd hdwf hdsat hdnames
+    rw[←Trail.mem_lits_names_eq] at hdnames
+    cases hdnames
+    case inl lh => exact lh
+    case inr rh =>
+      simp[Conflict.con, Satisfies.sat] at this hdsat
+      obtain ⟨ c, cmem, call ⟩ := this
+      obtain ⟨ j, jc, jt ⟩  := hdsat c cmem
+      have := call j jc
+      simp[Trail.lits] at jt this
+      cases jt <;> cases this
+      case inl.inl h1 h2 =>
+        obtain ⟨ a, amem, heq ⟩ := h1
+        rw[ALit.lit, ←heq] at h2
+        have h2 := congrArg Lit.negate h2
+        simp[Lit.negneg] at h2
+        rw[←h2]
+        exact Trail.mem_mem_lits amem
+      case inl.inr h1 h2 =>
+        obtain ⟨ a1, a1mem, heq1 ⟩ := h1
+        obtain ⟨ a2, a2mem, heq2 ⟩ := h2
+        have j1 : j ∈ Trail.lits (hd++t) := by
+          simp[Trail.lits]
+          left; exists a1
+        have j2 : j.negate ∈ Trail.lits (hd++t) := by
+          simp[Trail.lits]
+          right; exists a2
+        have := Trail.lit_and_litn_not_wf j1 j2
+        contradiction
+      case inr.inl h1 h2 =>
+        obtain ⟨ a, amem, heq ⟩ := h1
+        have l1 : l ∈ Trail.lits (hd++t) := by
+          simp[Trail.lits]
+          right;
+          exists a
+          simp[ALit.lit, Lit.neg_elim] at h2
+          simp[amem, heq, h2]
+        have l2 : l.negate ∈ Trail.lits (hd++t) := by
+          simp[Trail.lits_append, rh]
+        have := Trail.lit_and_litn_not_wf l1 l2
+        contradiction
+      case inr.inr h1 h2 =>
+        obtain ⟨ a1, a1mem, heq1 ⟩ := h1
+        obtain ⟨ a2, a2mem, heq2 ⟩ := h2
+        have j1 : j ∈ Trail.lits (hd++t) := by
+          simp[Trail.lits]
+          right; exists a1
+        have j2 : j.negate ∈ Trail.lits (hd++t) := by
+          simp[Trail.lits]
+          right; exists a2
+        have := Trail.lit_and_litn_not_wf j1 j2
+        contradiction

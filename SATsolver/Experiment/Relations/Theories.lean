@@ -296,6 +296,7 @@ theorem Trail.con_cons_con{tl : Trail}{f : Formula}:
   have := call l lmem
   simp[this]
 
+
 theorem Trail.con_tl_con_or_ud {f : Formula}{hd : ALit}{tl : Trail}:
   Trail.wf (hd::tl) → hd::tl ⊭ f → tl ⊭ f ∨ tl ¿ f := by
   intro twf h

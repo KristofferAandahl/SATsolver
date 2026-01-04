@@ -153,40 +153,70 @@ theorem helper1 :
         case inr rh => left; right; exact rh
 
 
-theorem bck_completeness {f : Formula}{t : Trail}{wf : ∃ a ∈ t, a.decidedP}{twf : t.wf}:
-  Completenes.invariant t f → (¬ ∃ hd, (hd++tl) ⊨ f)  →  Completenes.invariant (backtrack t wf twf) f := by
-  intro inv hcon
+
+theorem bck_completeness2 {f : Formula}{t : Trail}{wf : ∃ a ∈ t, a.decidedP}{twf : t.wf}:
+  Completenes.inv t f → (¬ ∃ hd, (hd++t) ⊨ f)  →  Completenes.inv (backtrack t wf twf) f := by
+  intro hcom hcon
   induction t
   case nil => simp at wf
   case cons x xs ih =>
     cases x
     case decided l =>
-      simp[backtrack, Completenes.invariant]
+      simp[backtrack, Completenes.inv]
       constructor
-      case left =>
-        intro hd hdwf hsat contra
-        simp[Lit.negneg, Satisfies.sat, Conflict.con] at contra hsat hcon
-        obtain ⟨ c, cmem, call ⟩ := hcon
-        obtain ⟨ j, jc, jt ⟩  := hsat c cmem
-        have := call j jc
-        simp[Trail.lits] at this
-        cases this
-        case inl lh =>
-          simp[ALit.lit] at lh
-          rw[←lh] at contra
-          have : j.negate ∈ (hd ++ xs).lits := by
-            simp[Trail.lits_append]
-            left; exact contra
-          have := Trail.lit_and_litn_not_wf jt this
-          contradiction
+      case left => exact hcom
+      case right =>
+        intro hd hdwf hdsat lmem
+        simp[←Trail.mem_lits_names_eq, Lit.negneg] at lmem
+        cases lmem
+        case inl lh => exact lh
         case inr rh =>
-          obtain ⟨ a, amem, heq ⟩ := rh
-          have := Trail.mem_mem_lits amem
-          rw[heq] at this
-          have : j.negate ∈ (hd ++ xs).lits := by
-            simp[Trail.lits_append]
-            right; exact this
-          have := Trail.lit_and_litn_not_wf jt this
-          contradiction
-      case right => simpa [Completenes.invariant] using inv
+          simp at hcon
+          have := hcon hd
+          simp[Satisfies.sat] at this hdsat
+          obtain ⟨ c, cmem, call ⟩ := this
+          obtain ⟨ j, jc, jt ⟩ := hdsat c cmem
+          have := call j jc
+          simp[Trail.lits] at jt this
+          cases jt
+          case inl lh =>
+            obtain ⟨ a, amem, heq ⟩ := lh
+            have := this.1 a amem
+            contradiction
+          case inr rh =>
+            obtain ⟨ a, amem, heq ⟩ := rh
+            have := this.2.2 a amem
+            contradiction
     case deduced l =>
+      simp[backtrack]
+      have : (¬∃ hd, hd ++ xs⊨f) := by
+        simp at hcon ⊢
+        intro t
+        have := hcon t
+        simp[Satisfies.sat] at this ⊢
+        obtain ⟨ c, cmem, call ⟩ := this
+        exists c
+        constructor
+        case left => exact cmem
+        case right =>
+          intro j jmem
+          have := call j jmem
+          simp[Trail.lits] at this ⊢
+          constructor
+          case left => exact this.1
+          case right => exact this.2.2
+      have wf' : ∃ a, a ∈ xs ∧ a.decidedP := by
+        obtain ⟨ a, amem, adec ⟩ := wf
+        simp at amem
+        cases amem
+        case inl lh =>
+          rw[lh] at adec
+          simp[ALit.decidedP] at adec
+        case inr rh =>
+          exists a
+      have twf' : Trail.wf xs := by
+        simp[Trail.wf, Trail.names] at twf ⊢
+        constructor
+        case left => exact twf.1.2
+        case right => exact twf.2.2
+      exact ih (twf := twf') (wf := wf') hcom.1 this

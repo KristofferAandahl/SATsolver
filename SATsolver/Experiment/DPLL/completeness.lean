@@ -127,3 +127,36 @@ theorem helper {l : Lit}{tl : Trail}{f : Formula} :
   obtain ⟨ hd, hdwf, hdsat ⟩ := hd
   have := this hd
   contradiction
+
+
+def inv (t : Trail)(f : Formula) : Prop :=
+  match t with
+  | [] => true
+  | (ALit.decided _)::tl => inv tl f
+  | (ALit.deduced l)::tl => inv tl f ∧ (∀ hd, Trail.wf (hd++tl) ∧ hd++tl ⊨ f → l.name ∈ hd.names → l ∈ hd.lits)
+
+
+theorem inv_completeness (t : Trail)(f : Formula) :
+  t.wf → inv t f → (∀ a ∈ t, a.deducedP) → t ⊭ f → ¬ ∃ (t' : Trail), t'.wf ∧ t' ⊨ f := by
+  simp
+  intro twf hinv hall hcon t' t'wf
+  induction t
+  case nil =>
+    have t'con := Trail.con_cons_con hcon t'
+    simp[] at t'con
+    have := sat_eq_not_con_or_ud t'wf (f := f)
+    simp[this, t'con]
+  case cons x xs ih =>
+    have wfxs := Trail.wf_cons twf
+    cases x
+    case decided l => have := hall (ALit.decided l) (by simp); simp[ALit.deducedP] at this
+    case deduced l =>
+      have invxs := hinv.1
+      have xsall : ∀ (a : ALit), a ∈ xs → a.deducedP := by
+        intro a amem
+        exact hall a (by simp[amem])
+
+
+
+
+  case cons x xs ih =>

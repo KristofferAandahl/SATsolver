@@ -62,6 +62,12 @@ theorem negneg (l : Lit) :
       have := congrArg negate heq
       simp[negate] at this
 
+theorem neg_elim {l j : Lit}:
+  l.negate = j.negate ↔ l = j := by
+  simp[negate]
+  cases l <;> cases j
+  all_goals simp
+
 def name : Lit → Nat
   | pos n | neg n => n
 
