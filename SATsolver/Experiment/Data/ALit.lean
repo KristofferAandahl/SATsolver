@@ -70,6 +70,13 @@ theorem dec_is_dec {a : ALit}:
     split
     all_goals simp
 
+theorem ded_iff_not_dec {a : ALit} :
+  a.deducedP ↔ ¬ a.decidedP := by
+  simp[decidedP, deducedP]
+  split
+  all_goals simp
+
+
 def name : ALit → Nat
   | decided l | deduced l => l.name
 
@@ -95,3 +102,32 @@ theorem lit_negate_negate_lit {a : ALit} :
 theorem negation_comm {l : Lit}:
   (ALit.decided l).negate = ALit.decided (l.negate) := by
   simp[ALit.negate]
+
+instance : BEq ALit where
+  beq x y := match x, y with
+    | decided x, decided y => x == y
+    | deduced x, deduced y => x == y
+    | _, _ => false
+
+instance : LawfulBEq ALit where
+  rfl := by
+    intro a
+    simp only[BEq.beq]
+    cases a
+    case decided l =>
+      cases l
+      all_goals simp
+    case deduced l =>
+      cases l
+      all_goals simp
+  eq_of_beq := by
+    intro a b
+    simp only [BEq.beq]
+    cases a <;> cases b
+    case decided.decided j k =>
+      cases j <;> cases k
+      all_goals simp
+    case deduced.deduced j k =>
+      cases j <;> cases k
+      all_goals simp
+    all_goals simp

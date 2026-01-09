@@ -80,7 +80,6 @@ theorem from_con {tl : Trail}{f : Formula} :
     case inr rh =>
       exact rh.1
 
-
 theorem modifier {tl : Trail}{f : Formula}{a : ALit}:
   (¬ ∃ hd, (hd++a::tl) ⊨ f) → (¬ ∃ hd, (hd++tl) ⊨ f) := by
   simp
@@ -136,27 +135,36 @@ def inv (t : Trail)(f : Formula) : Prop :=
   | (ALit.deduced l)::tl => inv tl f ∧ (∀ hd, Trail.wf (hd++tl) ∧ hd++tl ⊨ f → l.name ∈ hd.names → l ∈ hd.lits)
 
 
-theorem inv_completeness (t : Trail)(f : Formula) :
-  t.wf → inv t f → (∀ a ∈ t, a.deducedP) → t ⊭ f → ¬ ∃ (t' : Trail), t'.wf ∧ t' ⊨ f := by
+theorem inv_completeness {t : Trail}{f : Formula} :
+  t.wf → inv t f → (∀ a ∈ t, a.deducedP) → ¬(∃ hd, (hd++t).wf ∧ hd++t ⊨ f) → ¬ ∃ (t' : Trail), t'.wf ∧ t' ⊨ f := by
   simp
   intro twf hinv hall hcon t' t'wf
   induction t
   case nil =>
-    have t'con := Trail.con_cons_con hcon t'
-    simp[] at t'con
-    have := sat_eq_not_con_or_ud t'wf (f := f)
-    simp[this, t'con]
+    simp at *
+    exact hcon t' t'wf
   case cons x xs ih =>
     have wfxs := Trail.wf_cons twf
     cases x
-    case decided l => have := hall (ALit.decided l) (by simp); simp[ALit.deducedP] at this
+    case decided l =>
+      have := hall (ALit.decided l) (by simp)
+      simp[ALit.deducedP] at this
     case deduced l =>
       have invxs := hinv.1
       have xsall : ∀ (a : ALit), a ∈ xs → a.deducedP := by
         intro a amem
         exact hall a (by simp[amem])
-
-
-
-
-  case cons x xs ih =>
+      have xscon : (∀ (x : Trail), ¬x ++ xs⊨f) := by
+        intro hd
+        have := hcon hd
+        simp[Satisfies.sat] at this ⊢
+        obtain ⟨ c, cmem, call ⟩ := this
+        exists c
+        simp[cmem]
+        intro l lmem
+        have := call l lmem
+        simp[Trail.lits] at this ⊢
+        constructor
+        case left => exact this.1
+        case right => exact this.2.2
+      exact ih wfxs invxs xsall xscon

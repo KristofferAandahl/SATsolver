@@ -3,7 +3,7 @@ import SATsolver.Experiment.DPLL.distance
 
 
 
-def internal (t : Trail)(f : Formula)(v : Variables)(vz : v ≠ 0)(wf : f.wf ∧ v.wf f)(twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names): Bool × Trail :=
+def internal (t : Trail)(f : Formula)(v : Variables)(vz : v ≠ 0)(wf : f.wf ∧ v.wf f)(twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names)(com : Completenes.inv t f): Bool × Trail :=
   if sat : decide (t ⊨ f) then
     (true, t)
   else if con : decide (t ⊭ f) then
@@ -12,7 +12,11 @@ def internal (t : Trail)(f : Formula)(v : Variables)(vz : v ≠ 0)(wf : f.wf ∧
         simp[ALit.decidedP_iff_decidedB] at anyDec
         obtain ⟨ a, amem, adec ⟩ := anyDec
         exists a
-      internal (backtrack t bcwf twf.1) f v vz wf (bck_preserves_twf (tf := twf.2))
+      have com' : Completenes.inv (backtrack t bcwf twf.1) f := by
+        simp at con
+        have := Completenes.from_con con
+        sorry
+      internal (backtrack t bcwf twf.1) f v vz wf (bck_preserves_twf (tf := twf.2)) com'
     else (false, t)
   else
     let copt := f.find? (fun c => c.unit t)
@@ -29,7 +33,9 @@ def internal (t : Trail)(f : Formula)(v : Variables)(vz : v ≠ 0)(wf : f.wf ∧
         simp only [copt] at h
         have := List.get_find?_mem h
         simp[c, copt, this]
-      internal (propogate t c this) f v vz wf (ppg_preserves_wf cmem (fwf := wf.1) (twf := twf))
+      have com' : Completenes.inv (propogate t c this) f := by
+        exact ppg_completeness2 twf wf.1 com cmem
+      internal (propogate t c this) f v vz wf (ppg_preserves_wf cmem (fwf := wf.1) (twf := twf)) com'
     else
       have ud : t¿f := by
         simp at *
@@ -71,7 +77,9 @@ def internal (t : Trail)(f : Formula)(v : Variables)(vz : v ≠ 0)(wf : f.wf ∧
           simp only[lopt] at lsome
           have := List.get_find?_mem lsome
           simp[l, lopt, this]
-      internal (dec l t this) f v vz wf (dec_preserves_wf (fwf := wf.1) (twf := twf) lmem)
+      have com' : Completenes.inv (dec l t this) f := by
+        exact dec_preserves_completenes lmem com
+      internal (dec l t this) f v vz wf (dec_preserves_wf (fwf := wf.1) (twf := twf) lmem) com'
 termination_by distance t v vz
 decreasing_by
   have : t.length ≤ v := Trail.mem_vwf twf.1 twf.2 wf.2
@@ -93,4 +101,4 @@ decreasing_by
 def DPLL(f : Formula)(v : Variables)(wf : f.wf ∧ v.wf f) :=
   match f with
   | [] => (true, [])
-  | hd::tl => internal [] (hd::tl) v (Variables.f_cons_ne_zero wf.2 (fwf := wf.1)) wf (by simp[Trail.wf, Trail.names])
+  | hd::tl => internal [] (hd::tl) v (Variables.f_cons_ne_zero wf.2 (fwf := wf.1)) wf (by simp[Trail.wf, Trail.names]) (by simp[Completenes.inv])

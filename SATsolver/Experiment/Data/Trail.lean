@@ -210,3 +210,109 @@ theorem lit_of_wf{l : Lit}{t : Trail} :
       have := lit_and_litn_not_wf contra rh
       contradiction
     case right => exact rh
+
+theorem uniques {a b : ALit}{t : Trail} :
+  t.wf → a ≠ b → a ∈ t → b ∈ t → a.name ≠ b.name := by
+  intro twf hneq amem bmem
+  induction t
+  case nil => simp at amem
+  case cons x xs ih =>
+    cases amem <;> cases bmem
+    case head.head =>
+      contradiction
+    case head.tail bmem =>
+      intro contra
+      have := twf.1
+      simp[Trail.names, List.nodup_cons] at this
+      have := this.1 b bmem
+      simp[contra] at this
+    case tail.head amem =>
+      intro contra
+      have := twf.1
+      simp[Trail.names, List.nodup_cons] at this
+      have := this.1 a amem
+      simp[contra] at this
+    case tail.tail amem bmem =>
+      have : wf xs := by
+        simp[Trail.wf] at twf ⊢
+        constructor
+        case left =>
+          simp [Trail.names, List.nodup_cons] at twf ⊢
+          exact twf.1.2
+        case right =>
+          simp[Trail.names] at twf ⊢
+          exact twf.2.2
+      exact ih this amem bmem
+
+
+theorem nodup_wf{t : Trail} :
+  t.wf → t.Nodup := by
+  intro twf
+  induction t
+  case nil => simp
+  case cons x xs ih =>
+    have wfxs := wf_cons twf
+    have xsnd := ih wfxs
+    simp[xsnd]
+    intro contra
+    have := twf.1
+    simp[names] at this
+    have := this.1 x contra
+    contradiction
+
+
+def remove(t : Trail)(n : Nat): Trail :=
+  t.filter (fun a => a.name != n)
+
+theorem wf_remove{t : Trail}{n : Nat}:
+  t.wf → (t.remove n).wf := by
+  intro twf
+  simp[wf, names]
+  constructor
+  case left =>
+    have : List.Sublist (List.map ALit.name (t.remove n)) (List.map ALit.name t) := by
+      rw[List.sublist_map_iff]
+      exists t.remove n
+      simp[remove]
+    exact List.Nodup.sublist this twf.1
+  case right =>
+    intro a amem
+    simp[remove] at amem
+    have zeroh := twf.2
+    have := mem_mem_names amem.1
+    intro contra
+    rw[contra] at this
+    contradiction
+
+theorem wf_remapp{t : Trail}{a : ALit}:
+  t.wf → a ∈ t → wf (t.remove a.name ++ [a]) := by
+  intro twf amem
+  have nodup := nodup_wf twf
+  have wfr : wf (t.remove a.name) := wf_remove twf
+  simp[wf, names] at *
+  constructor
+  case left =>
+    simp[List.nodup_append, wfr]
+    intro b bmem contra
+    have := mem_mem_names bmem
+    rw[contra] at this
+    simp[names, remove] at this
+    obtain ⟨ b, bh, heq⟩ := this
+    simp[heq] at bh
+  case right =>
+    constructor
+    case left => exact wfr.2
+    case right =>
+      intro contra
+      have := twf.2 a amem
+      simp[contra] at this
+
+theorem remove_eq{t : Trail}{a b: ALit}:
+  t.wf → a ∈ t → b ∈ t → a ∈ (t.remove b.name) ∨ a = b := by
+  intro twf amem bmem
+  simp[remove, amem]
+  by_cases heq : a = b
+  case pos => simp[heq]
+  case neg =>
+    have := uniques twf heq amem bmem
+    simp[this]

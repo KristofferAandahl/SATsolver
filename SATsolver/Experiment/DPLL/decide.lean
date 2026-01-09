@@ -1,4 +1,5 @@
 import SATsolver.Experiment.Relations.Theories
+import SATsolver.Experiment.DPLL.completeness
 
 def dec (l : Lit)(t : Trail)(_ : t ¿ l): Trail :=
   ALit.decided l :: t
@@ -23,3 +24,8 @@ theorem dec_preserves_wf{l : Lit}{t : Trail}{lud : t ¿ l}{f : Formula}
     cases nmem
     case head => simp[ALit.name, lmem]
     case tail tail => exact twf.2 n tail
+
+theorem dec_preserves_completenes{l : Lit}{t : Trail}{lud : t ¿ l}{f : Formula}:
+  l.name ∈ f.names → Completenes.inv t f → Completenes.inv (dec l t lud) f := by
+  intro lmem h
+  simp[dec, Completenes.inv, h]

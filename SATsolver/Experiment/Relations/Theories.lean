@@ -774,10 +774,59 @@ theorem extract_mem {α} {l : List α}{a : α}:
       have := kh this b heq
       simp[this]
 
-
-
-
 /-
+theorem wf_erase {hd tl : Trail}{a : ALit}:
+  a ∈ hd → (hd++tl).wf → Trail.wf (a::tl) →  Trail.wf ((hd.erase a)++a::tl) := by
+  intro amem wf_app wf_con
+  simp[Trail.wf] at *
+  constructor
+  case right =>
+    simp[Trail.names]
+    constructor
+    case left =>
+      intro b bmem
+      have bhd := List.mem_of_mem_erase bmem
+      have := wf_app.2
+      simp[Trail.names] at this
+      exact this.1 b bhd
+    case right =>
+      have := wf_con.2
+      simp[Trail.names] at this
+      exact this
+  case left =>
+    simp[Trail.names, List.nodup_append]
+    constructor
+    case left =>
+      have := wf_app.1
+      simp[Trail.names, List.nodup_append] at this
+      have nodup := this.1
+      have hsub : (List.erase hd a).Sublist hd := List.erase_sublist
+      have : (List.map ALit.name (List.erase hd a)).Sublist (List.map ALit.name hd) := by
+        rw[List.sublist_map_iff]
+        exists hd.erase a
+      exact List.Nodup.sublist this nodup
+    case right =>
+      constructor
+      case left =>
+        have := wf_con.1
+        simp[Trail.names, List.nodup_cons] at this
+        exact this
+      case right =>
+        intro b bmem
+        have bmem := List.mem_of_mem_erase bmem
+        constructor
+        case left =>
+          have := wf_app.1
+          simp[Trail.names, List.nodup_append] at this
+          have : hd.Nodup := by
+            have := List.
+          have := List.Nodup.not_mem_erase
+          have := this.1
+          simp[List.nodup_] at thi
+
+
+
+
 theorem non_deduced {t : Trail}{f : Formula} :
   t.wf → (∀ a ∈ t, a.deducedP) → Trail.deduction_wf f t → ∀ t', (∃ l ∈ Trail.lits t', l.negate ∈ t.lits) → t' ⊭ f ∨ t' ¿ f:= by
   intro twf allded wf t' lh

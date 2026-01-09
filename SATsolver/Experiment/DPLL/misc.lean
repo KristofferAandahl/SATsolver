@@ -25,3 +25,38 @@ theorem arith_helper {n : Nat} :
   case zero => simp
   case succ n ih =>
     simp[Nat.pow_succ, ←Nat.mul_assoc, ih]
+
+
+
+theorem sublist_without_mem {e : α}{l : List α} :
+  l.Nodup → e ∈ l → ∃ (l' : List α ), e ∉ l' ∧ ∀ (i : α), i ∈ l → i ≠ e → i ∈ l' := by
+  intro nd emem
+  induction l
+  case nil => simp at emem
+  case cons x xs ih =>
+    cases emem
+    case head =>
+      exists xs
+      constructor
+      case left => simp [List.nodup_cons] at nd; exact nd.1
+      case right =>
+        intro i imem neq
+        simpa[neq] using imem
+    case tail emem =>
+      simp [List.nodup_cons] at nd
+      obtain ⟨ l', hall ⟩ := ih nd.2 emem
+      exists (x::l')
+      constructor
+      case left =>
+        simp[hall]
+        intro contra
+        rw[contra] at emem
+        have := nd.1
+        contradiction
+      case right =>
+        intro i imem neq
+        cases imem
+        case head => simp
+        case tail imem =>
+          have := hall.2 i imem neq
+          simp[this]

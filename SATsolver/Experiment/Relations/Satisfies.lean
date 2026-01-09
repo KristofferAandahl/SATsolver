@@ -43,3 +43,15 @@ instance : DecidableRel (Satisfies.sat (α := Trail) (β := Formula)) :=
 def Formula.sat_iff_all_csSat {f : Formula}{t : Trail} :
   t ⊨ f ↔ ∀ c ∈ f, t ⊨ c := by
   simp[Satisfies.sat]
+
+
+theorem sat_remapp_sat{t : Trail}{f : Formula}{a : ALit} :
+  t.wf → a ∈ t → (t⊨ f  ↔ (t.remove a.name ++ [a]) ⊨ f) := by
+  intro twf amem
+  have : (t.remove a.name ++ [a]).wf := Trail.wf_remapp twf amem
+  have := Trail.remove_eq twf amem amem
+  simp[Satisfies.sat] at *
+  intro c cmem
+  obtain ⟨ l, lc, lt ⟩ := sat c cmem
+  exists l
+  simp[lc, Trail.lits_append, Trail.remove]

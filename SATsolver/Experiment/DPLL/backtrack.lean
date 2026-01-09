@@ -155,7 +155,7 @@ theorem helper1 :
 
 
 theorem bck_completeness2 {f : Formula}{t : Trail}{wf : ∃ a ∈ t, a.decidedP}{twf : t.wf}:
-  Completenes.inv t f → (¬ ∃ hd, (hd++t) ⊨ f)  →  Completenes.inv (backtrack t wf twf) f := by
+  Completenes.inv t f → (¬ ∃ hd, (hd++t).wf ∧ (hd++t) ⊨ f)  →  Completenes.inv (backtrack t wf twf) f := by
   intro hcom hcon
   induction t
   case nil => simp at wf
@@ -172,8 +172,12 @@ theorem bck_completeness2 {f : Formula}{t : Trail}{wf : ∃ a ∈ t, a.decidedP}
         case inl lh => exact lh
         case inr rh =>
           simp at hcon
+          let hd' : Trail := hd.erase (ALit.decided l)
           have := hcon hd
           simp[Satisfies.sat] at this hdsat
+          sorry
+    sorry
+          /-
           obtain ⟨ c, cmem, call ⟩ := this
           obtain ⟨ j, jc, jt ⟩ := hdsat c cmem
           have := call j jc
@@ -220,3 +224,4 @@ theorem bck_completeness2 {f : Formula}{t : Trail}{wf : ∃ a ∈ t, a.decidedP}
         case left => exact twf.1.2
         case right => exact twf.2.2
       exact ih (twf := twf') (wf := wf') hcom.1 this
+-/
