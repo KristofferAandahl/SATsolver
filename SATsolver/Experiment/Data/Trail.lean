@@ -264,6 +264,12 @@ theorem nodup_wf{t : Trail} :
 def remove(t : Trail)(n : Nat): Trail :=
   t.filter (fun a => a.name != n)
 
+theorem mem_remove_mem{t : Trail}{a : ALit}{n : Nat} :
+  a ∈ t.remove n → a ∈ t := by
+  simp[remove]
+  intro amem neq
+  exact amem
+
 theorem wf_remove{t : Trail}{n : Nat}:
   t.wf → (t.remove n).wf := by
   intro twf
@@ -316,3 +322,55 @@ theorem remove_eq{t : Trail}{a b: ALit}:
   case neg =>
     have := uniques twf heq amem bmem
     simp[this]
+
+theorem wfapp_wfremapp{hd tl : Trail}{a : ALit}:
+  (hd++tl).wf → Trail.wf (a::tl) → ((hd.remove a.name) ++ a :: tl).wf := by
+    intro twf awf
+    simp[wf] at twf awf ⊢
+    constructor
+    case right =>
+      simp[names, remove] at twf ⊢
+      constructor
+      case left =>
+        intro x xmem hneq
+        exact twf.2.1 x xmem
+      case right =>
+        constructor
+        case left =>
+          intro contra
+          symm at contra
+          have := awf.2
+          simp[names, contra] at this
+        case right =>
+          intro x xmem
+          exact twf.2.2 x xmem
+    case left =>
+      simp[names, List.nodup_append]
+      constructor
+      case left =>
+        have : (hd.remove a.name).wf := wf_remove (wf_append twf).1
+        have := this.1
+        simpa [names] using this
+      case right =>
+        constructor
+        case left =>
+            simp[names, List.nodup_cons] at awf
+            exact awf.1
+        case right =>
+          intro x xmem
+          simp[remove] at xmem
+          simp[xmem.2]
+          intro b bmem
+          simp[names, List.nodup_append] at twf
+          exact twf.1.2.2 x xmem.1 b bmem
+
+
+theorem remove_nonmem {t : Trail}{n : Nat}:
+  n ∉ t.names → t.remove n = t := by
+  intro nin
+  simp[remove]
+  intro a amem
+  have := mem_mem_names amem
+  intro contra
+  rw[contra] at this
+  contradiction

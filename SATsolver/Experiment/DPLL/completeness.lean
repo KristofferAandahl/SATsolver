@@ -154,17 +154,46 @@ theorem inv_completeness {t : Trail}{f : Formula} :
       have xsall : ∀ (a : ALit), a ∈ xs → a.deducedP := by
         intro a amem
         exact hall a (by simp[amem])
-      have xscon : (∀ (x : Trail), ¬x ++ xs⊨f) := by
-        intro hd
-        have := hcon hd
-        simp[Satisfies.sat] at this ⊢
-        obtain ⟨ c, cmem, call ⟩ := this
-        exists c
-        simp[cmem]
-        intro l lmem
-        have := call l lmem
-        simp[Trail.lits] at this ⊢
-        constructor
-        case left => exact this.1
-        case right => exact this.2.2
+      have xscon : (∀ (x : Trail), (x ++ xs).wf → ¬x ++ xs⊨f):= by
+        intro hd wfapp
+        let hdrem := hd.remove (ALit.deduced l).name
+        have := Trail.wfapp_wfremapp wfapp twf
+        intro contra
+        apply hcon hdrem this
+        have mem_names := hinv.2 hd (And.intro wfapp contra)
+        simp[Satisfies.sat] at contra ⊢
+        intro c cmem
+        obtain ⟨ j, jc, jt ⟩ := contra c cmem
+        exists j
+        simp[jc, hdrem, Trail.lits_append] at jt ⊢
+        cases jt
+        case inl lh =>
+          obtain ⟨ a, amem, heq ⟩ := Trail.mem_lits_exists_mem lh
+          by_cases heq2 : j = l
+          case pos => simp[heq2, Trail.lits, ALit.lit]
+          case neg =>
+            by_cases hname : j.name = l.name
+            case pos =>
+              rw[←hname] at mem_names
+              have := Trail.mem_lits_mem_names lh
+              have := mem_names this
+              obtain ⟨ b, bmem, bheq ⟩ := Trail.mem_lits_exists_mem this
+              have : a ≠ b := by
+                intro contra
+                rw[←bheq, ←heq, contra] at heq2
+                contradiction
+              have := Trail.uniques (Trail.wf_append wfapp).1 this amem bmem
+              simp[←ALit.name_name_lit, heq, bheq] at this
+              contradiction
+            case neg =>
+              left
+              simp[Trail.remove, Trail.lits]
+              exists a
+              simp[amem, heq, ←ALit.name_name_lit]
+              intro contra
+              rw[contra] at hname
+              simp[ALit.lit] at hname
+        case inr rh =>
+          simp [Trail.lits] at rh ⊢
+          simp[rh]
       exact ih wfxs invxs xsall xscon

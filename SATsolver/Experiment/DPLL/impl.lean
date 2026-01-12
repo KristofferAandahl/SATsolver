@@ -15,7 +15,7 @@ def internal (t : Trail)(f : Formula)(v : Variables)(vz : v ≠ 0)(wf : f.wf ∧
       have com' : Completenes.inv (backtrack t bcwf twf.1) f := by
         simp at con
         have := Completenes.from_con con
-        sorry
+        exact bck_completeness2 (twf := twf.1) (wf := bcwf) com this
       internal (backtrack t bcwf twf.1) f v vz wf (bck_preserves_twf (tf := twf.2)) com'
     else (false, t)
   else

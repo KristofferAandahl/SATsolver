@@ -167,48 +167,82 @@ theorem bck_completeness2 {f : Formula}{t : Trail}{wf : ∃ a ∈ t, a.decidedP}
       case left => exact hcom
       case right =>
         intro hd hdwf hdsat lmem
+        simp at hcon
         simp[←Trail.mem_lits_names_eq, Lit.negneg] at lmem
         cases lmem
         case inl lh => exact lh
         case inr rh =>
-          simp at hcon
-          let hd' : Trail := hd.erase (ALit.decided l)
-          have := hcon hd
-          simp[Satisfies.sat] at this hdsat
-          sorry
-    sorry
-          /-
-          obtain ⟨ c, cmem, call ⟩ := this
-          obtain ⟨ j, jc, jt ⟩ := hdsat c cmem
+          let hd' : Trail := hd.remove (ALit.decided l).name
+          have := Trail.wfapp_wfremapp hdwf twf
+          have nsat := hcon hd' this
+          obtain ⟨ a, amem, heq ⟩ := Trail.mem_lits_exists_mem rh
+          have := (appsat_remapp_sat hdwf amem).mp hdsat
+          simp[Satisfies.sat] at this nsat
+          obtain ⟨ c, cmem, call ⟩ := nsat
+          obtain ⟨ j, jc, jt ⟩ := this c cmem
           have := call j jc
-          simp[Trail.lits] at jt this
+          simp[hd', Trail.lits_append] at this jt
           cases jt
           case inl lh =>
-            obtain ⟨ a, amem, heq ⟩ := lh
-            have := this.1 a amem
+            have := this.1
+            simp[←ALit.name_name_lit] at lh this
+            rw[heq] at lh
+            simp[ALit.lit] at this
             contradiction
           case inr rh =>
-            obtain ⟨ a, amem, heq ⟩ := rh
-            have := this.2.2 a amem
-            contradiction
-    case deduced l =>
+            have := this.2
+            simp[Trail.lits_cons] at rh this
+            cases rh
+            case inl lh =>
+              simp[lh, heq] at this
+              simp[ALit.lit] at this
+            case inr rh2 =>
+              have := this.2
+              contradiction
+    case deduced l=>
       simp[backtrack]
-      have : (¬∃ hd, hd ++ xs⊨f) := by
+      have : (¬∃ (hd : Trail), (hd ++ xs).wf ∧ hd ++ xs⊨f) := by
         simp at hcon ⊢
-        intro t
-        have := hcon t
-        simp[Satisfies.sat] at this ⊢
-        obtain ⟨ c, cmem, call ⟩ := this
-        exists c
-        constructor
-        case left => exact cmem
-        case right =>
-          intro j jmem
-          have := call j jmem
-          simp[Trail.lits] at this ⊢
-          constructor
-          case left => exact this.1
-          case right => exact this.2.2
+        intro hd wfapp
+        let hdrem := hd.remove (ALit.deduced l).name
+        have := Trail.wfapp_wfremapp wfapp twf
+        intro contra
+        apply hcon hdrem this
+        have mem_names := hcom.2 hd (And.intro wfapp contra)
+        simp[Satisfies.sat] at contra ⊢
+        intro c cmem
+        obtain ⟨ j, jc, jt ⟩ := contra c cmem
+        exists j
+        simp[jc, hdrem, Trail.lits_append] at jt ⊢
+        cases jt
+        case inl lh =>
+          obtain ⟨ a, amem, heq ⟩ := Trail.mem_lits_exists_mem lh
+          by_cases heq2 : j = l
+          case pos => simp[heq2, Trail.lits, ALit.lit]
+          case neg =>
+            by_cases hname : j.name = l.name
+            case pos =>
+              rw[←hname] at mem_names
+              have := Trail.mem_lits_mem_names lh
+              have := mem_names this
+              obtain ⟨ b, bmem, bheq ⟩ := Trail.mem_lits_exists_mem this
+              have : a ≠ b := by
+                intro contra
+                rw[←bheq, ←heq, contra] at heq2
+                contradiction
+              have := Trail.uniques (Trail.wf_append wfapp).1 this amem bmem
+              simp[←ALit.name_name_lit, heq, bheq] at this
+              contradiction
+            case neg =>
+              left
+              simp[Trail.remove, Trail.lits]
+              exists a
+              simp[amem, heq, ←ALit.name_name_lit]
+              intro contra
+              rw[contra] at hname
+              simp[ALit.lit] at hname
+        case inr rh =>
+          simp[Trail.lits_cons, rh]
       have wf' : ∃ a, a ∈ xs ∧ a.decidedP := by
         obtain ⟨ a, amem, adec ⟩ := wf
         simp at amem
@@ -223,5 +257,5 @@ theorem bck_completeness2 {f : Formula}{t : Trail}{wf : ∃ a ∈ t, a.decidedP}
         constructor
         case left => exact twf.1.2
         case right => exact twf.2.2
-      exact ih (twf := twf') (wf := wf') hcom.1 this
--/
+      have hcoml := hcom.1
+      exact ih hcoml this
