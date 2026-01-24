@@ -85,6 +85,41 @@ theorem Formula.nSatCon_ud{f : Formula}{t : Trail}:
   have := Clause.nSatCon_ud ncCon ncSat
   exists c
 
+theorem formula_trail_relation{f : Formula}{t : Trail}:
+  t ⊨ f ∨ t ⊭ f ∨ t ¿ f := by
+  by_cases hsat : t ⊨ f
+  case pos => simp[hsat]
+  case neg =>
+    by_cases hcon : t ⊭ f
+    case pos => simp[hcon]
+    case neg => simp[Formula.nSatCon_ud hsat hcon]
+
+theorem Formula.sat_ncon_nud{f : Formula}{t : Trail}{twf : t.wf}:
+  t ⊨ f → ¬ t ⊭ f ∧ ¬ t ¿ f := by
+  intro sat
+  constructor
+  case left =>
+    simp[Satisfies.sat, Conflict.con] at *
+    intro c cmem
+    obtain ⟨ l, lc, lt ⟩  := sat c cmem
+    exists l
+    simp[lc]
+    intro contra
+    have := Trail.lit_and_litn_not_wf lt contra
+    contradiction
+  case right =>
+    simp[Satisfies.sat, Undecided.ud] at *
+    intro c cmem l lmem lname
+    obtain ⟨ j, jc, jt ⟩  := sat c cmem
+    exists j
+    simp[jc, Trail.mem_lits_mem_names jt, Conflict.con]
+    intro contra
+    have := Trail.lit_and_litn_not_wf jt contra
+    contradiction
+
+
+
+
 
 theorem length_le_of_nodup_all_le {l : List Nat}{n : Nat}:
   l.Nodup → 0 ∉ l → (∀ m ∈ l, m ≤ n) → l.length ≤ n := by
