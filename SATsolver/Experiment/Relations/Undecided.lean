@@ -96,10 +96,20 @@ instance : DecidableRel (Undecided.ud (α := Trail) (β := Formula)) := by
   apply List.decidableBEx
 
 
-def Formula.ud_iff_exists_csUD {f : Formula}{t : Trail} :
+theorem Formula.ud_iff_exists_csUD {f : Formula}{t : Trail} :
   t ¿ f ↔ ∃ c ∈ f, t ¿ c := by
   simp[Undecided.ud]
 
+theorem  Formula.ud_exists_udname {f : Formula}{t : Trail} :
+  t ¿ f →  ∃ n, n ∈ f.names ∧ n ∉ t.names := by
+  intro ud
+  simp[Undecided.ud] at ud
+  obtain ⟨ c, cmem, lh, call ⟩ := ud
+  obtain ⟨ l, lmem, lnin ⟩ := lh
+  exists l.name
+  simp[lnin, Formula.names]
+  exists c
+  simp[cmem, Clause.mem_mem_name lmem]
 
 theorem ud_comm {hd  tl : Trail}{f : Formula}:
   hd++tl ¿ f ↔ tl ++ hd ¿ f := by

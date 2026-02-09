@@ -1,13 +1,13 @@
 import SATsolver.Experiment.Relations.Theories
 import SATsolver.Experiment.DPLL.completeness
 
-def propogate (t : Trail)(c : Clause)(wf : c.unit t): Trail :=
+def propagate (t : Trail)(c : Clause)(wf : c.unit t): Trail :=
   let l := c.getunit t wf
   ALit.deduced l :: t
 
 theorem ppg_preserves_wf {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}
   {fwf : f.wf}{twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names}:
-  c ∈ f → (propogate t c cu).wf ∧ ∀ n ∈ (propogate t c cu).names, n ∈ f.names := by
+  c ∈ f → (propagate t c cu).wf ∧ ∀ n ∈ (propagate t c cu).names, n ∈ f.names := by
   intro cmem
   have unit_ud : t ¿ c.getunit t cu := Clause.unit_ud
   have unit_mem : c.getunit t cu ∈ c := Clause.unit_mem
@@ -18,10 +18,10 @@ theorem ppg_preserves_wf {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}
     have : 0 ≠ (c.getunit t cu).name := by
       intro contra
       simp[←contra, (fwf c cmem).1.2.2] at unit_name_mem
-    simp[propogate, List.nodup_cons, Trail.names_cons, twf, ALit.name, unit_ud, this]
+    simp[propagate, List.nodup_cons, Trail.names_cons, twf, ALit.name, unit_ud, this]
   case right =>
     intro n nmem
-    simp[propogate] at nmem
+    simp[propagate] at nmem
     cases nmem
     case head =>
       have := Formula.mem_memClause_mem_names cmem unit_name_mem
@@ -29,9 +29,9 @@ theorem ppg_preserves_wf {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}
     case tail mem => exact twf.2 n mem
 
 theorem ppg_negation_con {l : Lit} {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
-  propogate t c cu = ALit.deduced l :: t → c ∈ f → ALit.decided l.negate :: t ⊭ f := by
+  propagate t c cu = ALit.deduced l :: t → c ∈ f → ALit.decided l.negate :: t ⊭ f := by
   intro h hmem
-  simp[propogate] at h
+  simp[propagate] at h
   have lmem : l ∈ c := by
     rw[←h]
     exact Clause.unit_mem
@@ -61,11 +61,11 @@ theorem ppg_negation_con {l : Lit} {t : Trail}{c : Clause}{cu : c.unit t}{f : Fo
       simp[Trail.lits_cons, this]
 
 theorem ppg_deduction_inv {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
-  t.deduction_wf f → c ∈ f → Trail.deduction_wf f (propogate t c cu) := by
+  t.deduction_wf f → c ∈ f → Trail.deduction_wf f (propagate t c cu) := by
   intro h cmem
   let l := c.getunit t cu
-  have : propogate t c cu = ALit.deduced l :: t := by
-    simp[propogate, l]
+  have : propagate t c cu = ALit.deduced l :: t := by
+    simp[propagate, l]
   rw[this]
   simp[Trail.deduction_wf]
   have := ppg_negation_con this cmem
@@ -95,12 +95,12 @@ theorem ppg_deduction_inv {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
 
 
 theorem ppg_completeness {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
-  (t.wf ∧ ∀ n ∈ t.names, n ∈ f.names) → f.wf → Completenes.invariant t f → c ∈ f → Completenes.invariant (propogate t c cu)  f := by
+  (t.wf ∧ ∀ n ∈ t.names, n ∈ f.names) → f.wf → Completenes.invariant t f → c ∈ f → Completenes.invariant (propagate t c cu)  f := by
   intro twf fwf h cmem
   have ppgwf := ppg_preserves_wf cmem (twf := twf) (fwf := fwf) (cu := cu)
   let l := c.getunit t cu
-  have : propogate t c cu = ALit.deduced l :: t := by
-    simp[propogate, l]
+  have : propagate t c cu = ALit.deduced l :: t := by
+    simp[propagate, l]
   rw[this] at ppgwf ⊢
   have := ppg_negation_con this cmem
   simp[Completenes.invariant]
@@ -145,12 +145,12 @@ theorem ppg_completeness {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
   case right => exact h
 
 theorem ppg_completeness2 {t : Trail}{c : Clause}{cu : c.unit t}{f : Formula}:
-  (t.wf ∧ ∀ n ∈ t.names, n ∈ f.names) → f.wf → Completenes.inv t f → c ∈ f → Completenes.inv (propogate t c cu)  f := by
+  (t.wf ∧ ∀ n ∈ t.names, n ∈ f.names) → f.wf → Completenes.inv t f → c ∈ f → Completenes.inv (propagate t c cu)  f := by
   intro twf fwf hcom cmem
   have ppgwf := ppg_preserves_wf cmem (twf := twf) (fwf := fwf) (cu := cu)
   let l := c.getunit t cu
-  have : propogate t c cu = ALit.deduced l :: t := by
-    simp[propogate, l]
+  have : propagate t c cu = ALit.deduced l :: t := by
+    simp[propagate, l]
   rw[this] at ppgwf ⊢
   have := ppg_negation_con this cmem
   simp[Completenes.inv]

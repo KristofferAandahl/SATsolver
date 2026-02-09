@@ -13,6 +13,13 @@ def lit : ALit → Lit
 instance : Coe ALit Lit where
   coe a := a.lit
 
+def toString : ALit → String
+  | decided l => s!"{l}†"
+  | deduced l => s!"{l}"
+
+instance : ToString ALit where
+  toString a := a.toString
+
 def negate : ALit → ALit
   | decided l => decided l.negate
   | deduced l  => deduced l.negate

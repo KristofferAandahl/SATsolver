@@ -19,8 +19,12 @@ theorem mem_names_exist_mem {c : Clause}{n : Nat} :
   exists l
 
 def wf (c : Clause) : Prop :=
-  c ≠ [] ∧ (∀ l1 ∈ c, ∀ l2 ∈ c, l1 ≠ l2 → l1.name ≠ l2.name) ∧ 0 ∉ c.names
+  c ≠ [] ∧ c.names.Nodup ∧ 0 ∉ c.names
 
+instance : DecidablePred wf := by
+  intro c
+  simp[wf]
+  apply instDecidableAnd
 
 theorem wf_names {c : Clause} :
   c.wf → c.names ≠ [] := by

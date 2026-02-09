@@ -809,6 +809,11 @@ theorem extract_mem {α} {l : List α}{a : α}:
       have := kh this b heq
       simp[this]
 
+theorem Trail.nud_vars{t : Trail}{f : Formula}{v : Variables} :
+  t.wf → f.wf → v.wf f → (∀ n ∈ t.names, n ∈ f.names) → t.names.length = v → ¬ t ¿ f  := by
+  intro twf fwf vwf nall heq contra
+  have := Trail.ud_vars twf fwf vwf nall contra
+  simp[heq] at this
 /-
 theorem wf_erase {hd tl : Trail}{a : ALit}:
   a ∈ hd → (hd++tl).wf → Trail.wf (a::tl) →  Trail.wf ((hd.erase a)++a::tl) := by

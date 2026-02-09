@@ -26,7 +26,22 @@ def mem_memClause_mem {f : Formula}{c : Clause} :
 
 def names (f : Formula) : List Nat := (f.flatMap Clause.names)
 
-def wf(f : Formula) : Prop := ∀ c ∈ f, c.wf ∧ ∀ n ∈ f.names, ∀ m < n, m ∈ f.names
+def wf(f : Formula) : Prop := ∀ c ∈ f, c.wf ∧ ∀ n ∈ f.names, ∀ m < n, m ≠ 0 → m ∈ f.names
+
+
+theorem zero_not_names {f : Formula}:
+  f.wf → 0 ∉ f.names := by
+  intro fwf
+  simp[wf, names] at *
+  intro c cmem
+  have cwf := fwf c cmem
+  simp[Clause.wf] at cwf
+  exact cwf.1.2.2
+
+instance : DecidablePred wf := by
+  intro f
+  simp[wf]
+  apply List.decidableBAll
 
 
 def names_cons {f : Formula}(wf : f.wf) :
@@ -111,6 +126,32 @@ instance : DecidableRel wf := by
 
 end Variables
 
+
+theorem wf_check{f : Formula}{v : Variables}:
+  (∀ c ∈ f, c.wf) → v.wf f → f.wf := by
+  intro call vwf
+  simp[Formula.wf, Variables.wf] at *
+  intro c cmem
+  constructor
+  case left => exact call c cmem
+  case right =>
+    intro n nmem m mltn mzero
+    have nlev := vwf.1 n nmem
+    have mltv := Nat.lt_of_lt_of_le mltn nlev
+    have mlev := Nat.le_of_lt mltv
+    exact vwf.2 m mlev mzero
+
+/-
+theorem check_imp_wf {f  : Formula}{v : Variables} :
+  wf_check f v = true → f.wf ∧ v.wf f := by
+  simp[wf_check, Formula.wf, Variables.wf]
+  intro cwfs nats leqs
+  constructor
+  case left =>
+    intro c cmem
+    simp[cwfs c cmem]
+    intro n name m mle nzero
+-/
 
 
 /-

@@ -54,7 +54,7 @@ theorem sat_eq_not_con_or_ud {t : Trail}{f : Formula}:
         exact this
 
 
-theorem from_con {tl : Trail}{f : Formula} :
+theorem con_no_exist {tl : Trail}{f : Formula} :
   tl ⊭ f → ¬ ∃ hd, Trail.wf (hd++tl) ∧ hd ++tl ⊨ f := by
   simp[Conflict.con, Satisfies.sat]
   intro c cmem call hd hdwf

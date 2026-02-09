@@ -217,9 +217,9 @@ theorem distance_dec {l : Lit}{t : Trail}{v: Variables}{lud : t ¿ l}{wf : v ≠
   simp[h]
 
 theorem distance_prop{t : Trail}{c : Clause}{pwf : c.unit t}{v: Variables}{wf : v ≠ 0}:
-  t.length < v → distance (propogate t c pwf) v wf < distance t v wf:= by
+  t.length < v → distance (propagate t c pwf) v wf < distance t v wf:= by
   intro h
-  simp only [distance, propogate, List.reverse_cons]
+  simp only [distance, propagate, List.reverse_cons]
   apply distance_append
   simp[h]
 

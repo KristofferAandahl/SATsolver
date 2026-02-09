@@ -89,3 +89,10 @@ theorem neg_ineq{l : Lit} :
   simp[negate]
   cases l
   all_goals simp
+
+def toString : Lit → String
+  | pos n => s!"{n}"
+  | neg n => s!"¬{n}"
+
+instance : ToString Lit where
+  toString l := l.toString
