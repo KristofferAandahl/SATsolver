@@ -29,18 +29,40 @@ def dpll_file (file: System.FilePath) : IO Nat := do
     return 0
 
 
-def main : IO Unit := do
-  let dir  ← System.FilePath.readDir "flat100-239"
-  let mut average := 0
-  let mut max := 0
-  let mut files := 0
-  for entry in dir do
-    let time ← dpll_file entry.path
-    if time == 0 then
-      IO.println "error has been found"
-      break
-    else if max < time then max := time
-    average := time + average
-    files := files + 1
-    /-if files >= 10 then break-/
-  IO.print s!"Files run : {files}, average time {average/files} and max time {max}"
+def main (args : List String) : IO Unit := do
+  match args with
+  | [] => IO.println "Please provide a file or a directory"
+  | [folder] =>
+    let dir  ← System.FilePath.readDir folder
+    let mut average := 0
+    let mut max := 0
+    let mut files := 0
+    for entry in dir do
+      let time ← dpll_file entry.path
+      if time == 0 then
+        IO.println "error has been found"
+        break
+      else if max < time then max := time
+      average := time + average
+      files := files + 1
+    IO.print s!"Files run : {files}, average time {average/files} and max time {max}"
+  | [folder, stop] =>
+      let stopopt := stop.toNat?
+      if h : stopopt.isSome then
+        let stop := stopopt.get h
+        let dir  ← System.FilePath.readDir folder
+        let mut average := 0
+        let mut max := 0
+        let mut files := 0
+        for entry in dir do
+          let time ← dpll_file entry.path
+          if time == 0 then
+            IO.println "error has been found"
+            break
+          else if max < time then max := time
+          average := time + average
+          files := files + 1
+          if files >= stop then break
+        IO.print s!"Files run : {files}, average time {average/files} and max time {max}"
+      else IO.println "Second argument should be a number"
+  | _ => IO.println "Too many arguments"
