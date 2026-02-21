@@ -288,9 +288,9 @@ theorem DPLL.completeness {f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}:
     contradiction
 
 
-theorem final_state_moma {f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz : v ≠ 0}{wf : f.wf ∧ v.wf f}{b : Bool}{t t' : Trail}{twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names}{com : Completenes.inv t f}{hocc : occ = occurences f v wf}:
-  internal_moma t f v occ vz wf twf com hocc = (b, t') → (b = true ∧ t' ⊨ f) ∨ b = false := by
-  unfold internal_moma
+theorem final_state_maxo {f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz : v ≠ 0}{wf : f.wf ∧ v.wf f}{b : Bool}{t t' : Trail}{twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names}{com : Completenes.inv t f}{hocc : occ = occurences f v wf}:
+  internal_maxo t f v occ vz wf twf com hocc = (b, t') → (b = true ∧ t' ⊨ f) ∨ b = false := by
+  unfold internal_maxo
   split
   case isTrue hsat =>
     simp at hsat ⊢
@@ -302,7 +302,7 @@ theorem final_state_moma {f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz
       split
       case isTrue exDec =>
         intro h
-        exact final_state_moma h
+        exact final_state_maxo h
       case isFalse exDec =>
         simp
         intro bh th
@@ -312,10 +312,10 @@ theorem final_state_moma {f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz
       split
       case isTrue hunit =>
         intro h
-        exact final_state_moma h
+        exact final_state_maxo h
       case isFalse hunit =>
         intro h
-        exact final_state_moma h
+        exact final_state_maxo h
 termination_by distance t v vz
 decreasing_by
   have : t.length < v := by
@@ -337,18 +337,18 @@ decreasing_by
   have : t.length ≤ v := Trail.mem_vwf twf.1 twf.2 wf.2
   exact distance_bc this
 
-theorem DPLL_moma.final_state{f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}{b : Bool}{t : Trail}:
-DPLL_moma f  v wf = (b, t) → (b = true ∧ t ⊨ f) ∨ b = false := by
-  simp[DPLL_moma]
+theorem DPLL_maxo.final_state{f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}{b : Bool}{t : Trail}:
+DPLL_maxo f  v wf = (b, t) → (b = true ∧ t ⊨ f) ∨ b = false := by
+  simp[DPLL_maxo]
   cases f
   case nil => simp[Satisfies.sat]
   case cons c cs =>
     simp
-    exact final_state_moma
+    exact final_state_maxo
 
-theorem moma_wf{f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz : v ≠ 0}{wf : f.wf ∧ v.wf f}{b : Bool}{t t' : Trail}{twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names}{com : Completenes.inv t f}{hocc : occ = occurences f v wf}:
-  internal_moma t f v occ vz wf twf com hocc = (b, t') → t'.wf := by
-  unfold internal_moma
+theorem maxo_wf{f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz : v ≠ 0}{wf : f.wf ∧ v.wf f}{b : Bool}{t t' : Trail}{twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names}{com : Completenes.inv t f}{hocc : occ = occurences f v wf}:
+  internal_maxo t f v occ vz wf twf com hocc = (b, t') → t'.wf := by
+  unfold internal_maxo
   split
   case isTrue hsat =>
     simp at hsat ⊢
@@ -360,7 +360,7 @@ theorem moma_wf{f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz : v ≠ 0
       split
       case isTrue exDec =>
         intro h
-        exact moma_wf h
+        exact maxo_wf h
       case isFalse exDec =>
         simp
         intro bh th
@@ -370,10 +370,10 @@ theorem moma_wf{f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz : v ≠ 0
       split
       case isTrue hunit =>
         intro h
-        exact moma_wf h
+        exact maxo_wf h
       case isFalse hunit =>
         intro h
-        exact moma_wf h
+        exact maxo_wf h
 termination_by distance t v vz
 decreasing_by
   have : t.length < v := by
@@ -396,19 +396,19 @@ decreasing_by
   exact distance_bc this
 
 
-theorem DPLL_moma.wf{f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}{b : Bool}{t : Trail}:
-DPLL_moma f  v wf = (b, t) → t.wf := by
-  simp[DPLL_moma]
+theorem DPLL_maxo.wf{f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}{b : Bool}{t : Trail}:
+DPLL_maxo f  v wf = (b, t) → t.wf := by
+  simp[DPLL_maxo]
   cases f
   case nil => simp; intro bh heq; simp[heq, Trail.wf, Trail.names]
   case cons c cs =>
     simp
-    exact moma_wf
+    exact maxo_wf
 
 
-theorem moma_all_deduced_if_con{f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz : v ≠ 0}{wf : f.wf ∧ v.wf f}{b : Bool}{t t' : Trail}{twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names}{com : Completenes.inv t f}{hocc : occ = occurences f v wf}:
-  internal_moma t f v occ vz wf twf com hocc = (b, t') → b = false → (t' ⊭ f ∧  ∀ a ∈ t', a.deducedP) := by
-  unfold internal_moma
+theorem maxo_all_deduced_if_con{f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz : v ≠ 0}{wf : f.wf ∧ v.wf f}{b : Bool}{t t' : Trail}{twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names}{com : Completenes.inv t f}{hocc : occ = occurences f v wf}:
+  internal_maxo t f v occ vz wf twf com hocc = (b, t') → b = false → (t' ⊭ f ∧  ∀ a ∈ t', a.deducedP) := by
+  unfold internal_maxo
   split
   case isTrue =>
     simp
@@ -418,7 +418,7 @@ theorem moma_all_deduced_if_con{f: Formula}{v : Variables}{occ : List (Nat × Na
     split
     case isTrue hcon =>
       split
-      case isTrue hexi => exact moma_all_deduced_if_con
+      case isTrue hexi => exact maxo_all_deduced_if_con
       case isFalse hexi =>
         simp[ALit.decidedP_iff_decidedB, ←ALit.ded_iff_not_dec] at hexi
         intro heq bfalse
@@ -431,9 +431,9 @@ theorem moma_all_deduced_if_con{f: Formula}{v : Variables}{occ : List (Nat × Na
       simp
       split
       case isTrue hunit =>
-        exact moma_all_deduced_if_con
+        exact maxo_all_deduced_if_con
       case isFalse hunit =>
-        exact moma_all_deduced_if_con
+        exact maxo_all_deduced_if_con
   termination_by distance t v vz
   decreasing_by
     have : t.length < v := by
@@ -455,9 +455,9 @@ theorem moma_all_deduced_if_con{f: Formula}{v : Variables}{occ : List (Nat × Na
     have : t.length ≤ v := Trail.mem_vwf twf.1 twf.2 wf.2
     exact distance_bc this
 
-theorem moma_com_preserved {f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz : v ≠ 0}{wf : f.wf ∧ v.wf f}{b : Bool}{t t' : Trail}{twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names}{com : Completenes.inv t f}{hocc : occ = occurences f v wf}:
-  internal_moma t f v occ vz wf twf com hocc = (b, t') → Completenes.inv t' f := by
-  unfold internal_moma
+theorem maxo_com_preserved {f: Formula}{v : Variables}{occ : List (Nat × Nat)}{vz : v ≠ 0}{wf : f.wf ∧ v.wf f}{b : Bool}{t t' : Trail}{twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names}{com : Completenes.inv t f}{hocc : occ = occurences f v wf}:
+  internal_maxo t f v occ vz wf twf com hocc = (b, t') → Completenes.inv t' f := by
+  unfold internal_maxo
   split
   case isTrue hsat =>
     intro heq
@@ -471,7 +471,7 @@ theorem moma_com_preserved {f: Formula}{v : Variables}{occ : List (Nat × Nat)}{
       case isTrue exdec=>
         intro h
         simp at h
-        exact moma_com_preserved h
+        exact maxo_com_preserved h
       case isFalse exdec =>
         intro heq
         simp at heq
@@ -481,9 +481,9 @@ theorem moma_com_preserved {f: Formula}{v : Variables}{occ : List (Nat × Nat)}{
       simp
       split
       case isTrue exuni =>
-        exact moma_com_preserved
+        exact maxo_com_preserved
       case isFalse exuni =>
-        exact moma_com_preserved
+        exact maxo_com_preserved
   termination_by distance t v vz
   decreasing_by
     have : t.length < v := by
@@ -505,9 +505,9 @@ theorem moma_com_preserved {f: Formula}{v : Variables}{occ : List (Nat × Nat)}{
     have : t.length ≤ v := Trail.mem_vwf twf.1 twf.2 wf.2
     exact distance_bc this
 
-theorem DPLL_moma.com_preserved {f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}{b : Bool}{t : Trail} :
-  DPLL_moma f v wf = (b, t) → Completenes.inv t f := by
-  simp[DPLL_moma]
+theorem DPLL_maxo.com_preserved {f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}{b : Bool}{t : Trail} :
+  DPLL_maxo f v wf = (b, t) → Completenes.inv t f := by
+  simp[DPLL_maxo]
   cases f
   case nil =>
     simp
@@ -516,12 +516,12 @@ theorem DPLL_moma.com_preserved {f : Formula}{v : Variables}{wf : f.wf ∧ v.wf 
   case cons c cs =>
     simp
     intro h
-    exact moma_com_preserved h
+    exact maxo_com_preserved h
 
 
-theorem DPLL_moma.all_deduced_if_con {f : Formula}{v : Variables} {wf : f.wf ∧ v.wf f}{b : Bool}{t : Trail} :
-  DPLL_moma f v wf = (b, t) → b = false → t ⊭ f ∧ ∀ a ∈ t, a.deducedP := by
-  simp[DPLL_moma]
+theorem DPLL_maxo.all_deduced_if_con {f : Formula}{v : Variables} {wf : f.wf ∧ v.wf f}{b : Bool}{t : Trail} :
+  DPLL_maxo f v wf = (b, t) → b = false → t ⊭ f ∧ ∀ a ∈ t, a.deducedP := by
+  simp[DPLL_maxo]
   cases f
   case nil =>
     simp
@@ -530,22 +530,22 @@ theorem DPLL_moma.all_deduced_if_con {f : Formula}{v : Variables} {wf : f.wf ∧
   case cons x xs =>
     simp
     intro heq bfalse
-    exact moma_all_deduced_if_con heq bfalse
+    exact maxo_all_deduced_if_con heq bfalse
 
 
-theorem DPLL_moma.soundness {f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}{b : Bool}{t : Trail} :
-  DPLL_moma f  v wf = (b, t) → b = true → ∃ (t : Trail), t.wf ∧ t ⊨ f := by
+theorem DPLL_maxo.soundness {f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}{b : Bool}{t : Trail} :
+  DPLL_maxo f  v wf = (b, t) → b = true → ∃ (t : Trail), t.wf ∧ t ⊨ f := by
   intro h bh
-  have fs := DPLL_moma.final_state h
-  have wf := DPLL_moma.wf h
+  have fs := DPLL_maxo.final_state h
+  have wf := DPLL_maxo.wf h
   simp[bh] at fs
   exists t
 
-theorem DPLL_moma.final_false {b : Bool}{f: Formula}{v : Variables}{wf : f.wf ∧ v.wf f}{t : Trail}{twf : t.wf}:
-  DPLL_moma f v wf = (b, t) → b = false → ¬ (∃ (t : Trail), t.wf ∧ t ⊨ f) := by
+theorem DPLL_maxo.final_false {b : Bool}{f: Formula}{v : Variables}{wf : f.wf ∧ v.wf f}{t : Trail}{twf : t.wf}:
+  DPLL_maxo f v wf = (b, t) → b = false → ¬ (∃ (t : Trail), t.wf ∧ t ⊨ f) := by
   intro heq bfalse
-  have state := DPLL_moma.all_deduced_if_con heq bfalse
-  have com := DPLL_moma.com_preserved heq
+  have state := DPLL_maxo.all_deduced_if_con heq bfalse
+  have com := DPLL_maxo.com_preserved heq
   have := Completenes.inv_completeness twf com state.2
   simp at this ⊢
   intro x xwf
@@ -554,22 +554,22 @@ theorem DPLL_moma.final_false {b : Bool}{f: Formula}{v : Variables}{wf : f.wf �
   exact this nohead x xwf
 
 
-theorem DPLL_moma.completeness {f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}:
-  (∃ (t : Trail), t.wf ∧ t ⊨ f) → ∃ (t : Trail), DPLL_moma f v wf = (true, t) := by
+theorem DPLL_maxo.completeness {f : Formula}{v : Variables}{wf : f.wf ∧ v.wf f}:
+  (∃ (t : Trail), t.wf ∧ t ⊨ f) → ∃ (t : Trail), DPLL_maxo f v wf = (true, t) := by
   intro h
   obtain ⟨ t, twf, tsat ⟩ := h
-  let dpll : (Bool ×  Trail) := DPLL_moma f v wf
+  let dpll : (Bool ×  Trail) := DPLL_maxo f v wf
   let b := dpll.1
   let t' := dpll.2
-  have dplleq : DPLL_moma f v wf = (b, t') := by simp[dpll, b ,t']
-  have := DPLL_moma.final_state dplleq
+  have dplleq : DPLL_maxo f v wf = (b, t') := by simp[dpll, b ,t']
+  have := DPLL_maxo.final_state dplleq
   cases this
   case inl lh =>
     exists t'
     rw[dplleq, lh.1]
   case inr rh =>
-    have := DPLL_moma.wf dplleq
-    have := DPLL_moma.final_false (twf := this) dplleq rh
+    have := DPLL_maxo.wf dplleq
+    have := DPLL_maxo.final_false (twf := this) dplleq rh
     simp at this
     have := this t twf
     contradiction

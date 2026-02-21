@@ -142,7 +142,7 @@ theorem nocc_nf{res : Nat × Nat}{f : Formula}{v : Variables}(wf : f.wf ∧ v.wf
   exact wf.2.2 res.1 nlev nnzero
 
 
-def internal_moma (t : Trail)(f : Formula)(v : Variables) (occ : List (Nat × Nat))(vz : v ≠ 0)(wf : f.wf ∧ v.wf f)(twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names)(com : Completenes.inv t f)(hocc : occ = occurences f v wf): Bool × Trail :=
+def internal_maxo (t : Trail)(f : Formula)(v : Variables) (occ : List (Nat × Nat))(vz : v ≠ 0)(wf : f.wf ∧ v.wf f)(twf : t.wf ∧ ∀ n ∈ t.names, n ∈ f.names)(com : Completenes.inv t f)(hocc : occ = occurences f v wf): Bool × Trail :=
   if sat : decide (t ⊨ f) then
     (true, t)
   else if con : decide (t ⊭ f) then
@@ -155,7 +155,7 @@ def internal_moma (t : Trail)(f : Formula)(v : Variables) (occ : List (Nat × Na
         simp at con
         have := Completenes.con_no_exist con
         exact bck_completeness2 (twf := twf.1) (wf := bcwf) com this
-      internal_moma (backtrack t bcwf twf.1) f v occ vz wf (bck_preserves_twf (tf := twf.2)) com' hocc
+      internal_maxo (backtrack t bcwf twf.1) f v occ vz wf (bck_preserves_twf (tf := twf.2)) com' hocc
     else (false, t)
   else
     let copt := f.find? (fun c => c.unit t)
@@ -174,7 +174,7 @@ def internal_moma (t : Trail)(f : Formula)(v : Variables) (occ : List (Nat × Na
         simp[c, copt, this]
       have com' : Completenes.inv (propagate t c this) f := by
         exact ppg_completeness2 twf wf.1 com cmem
-      internal_moma (propagate t c this) f v occ vz wf (ppg_preserves_wf cmem (fwf := wf.1) (twf := twf)) com' hocc
+      internal_maxo (propagate t c this) f v occ vz wf (ppg_preserves_wf cmem (fwf := wf.1) (twf := twf)) com' hocc
     else
       have ud : t¿f := by
         simp at *
@@ -204,7 +204,7 @@ def internal_moma (t : Trail)(f : Formula)(v : Variables) (occ : List (Nat × Na
         exact this
       have com' : Completenes.inv (dec (Lit.pos res.1) t this) f := by
         exact dec_preserves_completenes lmem com
-      internal_moma (dec (Lit.pos res.1) t this) f v occ vz wf (dec_preserves_wf (fwf := wf.1) (twf := twf) lmem) com' hocc
+      internal_maxo (dec (Lit.pos res.1) t this) f v occ vz wf (dec_preserves_wf (fwf := wf.1) (twf := twf) lmem) com' hocc
 termination_by distance t v vz
 decreasing_by
   have : t.length ≤ v := Trail.mem_vwf twf.1 twf.2 wf.2
@@ -223,9 +223,9 @@ decreasing_by
   exact distance_dec this
 
 
-def DPLL_moma(f : Formula)(v : Variables)(wf : f.wf ∧ v.wf f) :=
+def DPLL_maxo(f : Formula)(v : Variables)(wf : f.wf ∧ v.wf f) :=
   match f with
   | [] => (true, [])
   | hd::tl =>
     let occ := occurences (hd::tl) v wf
-    internal_moma [] (hd::tl) v occ (Variables.f_cons_ne_zero wf.2 (fwf := wf.1)) wf (by simp[Trail.wf, Trail.names]) (by simp[Completenes.inv]) (by simp[occ])
+    internal_maxo [] (hd::tl) v occ (Variables.f_cons_ne_zero wf.2 (fwf := wf.1)) wf (by simp[Trail.wf, Trail.names]) (by simp[Completenes.inv]) (by simp[occ])

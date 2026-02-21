@@ -130,7 +130,7 @@ theorem helper {l : Lit}{tl : Trail}{f : Formula} :
 
 def inv (t : Trail)(f : Formula) : Prop :=
   match t with
-  | [] => true
+  | [] => True
   | (ALit.decided _)::tl => inv tl f
   | (ALit.deduced l)::tl => inv tl f ∧ (∀ hd, Trail.wf (hd++tl) ∧ hd++tl ⊨ f → l.name ∈ hd.names → l ∈ hd.lits)
 

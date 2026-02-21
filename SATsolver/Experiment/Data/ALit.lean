@@ -43,7 +43,6 @@ theorem negneg {a : ALit} :
       simp at heq
       simp[←heq, Lit.negneg]
 
-
 def decidedP : ALit → Prop
   | decided _ => True
   | deduced _ => False
