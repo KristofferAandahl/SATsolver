@@ -16,7 +16,7 @@ def dpll_file (file: System.FilePath) : IO Nat := do
         exact And.intro fwf vwf
       IO.println "start"
       let start ← IO.monoMsNow
-      let (b, t) ← pure (DPLL_moma cnf nvars wf)
+      let (b, t) ← pure (DPLL_maxo cnf nvars wf)
       let stop ← IO.monoMsNow
       IO.println s!"Time used: {stop-start}ms. Result {b} and {t}"
       return (stop-start)
@@ -30,11 +30,10 @@ def dpll_file (file: System.FilePath) : IO Nat := do
 
 
 def main : IO Unit := do
-  let dir  ← System.FilePath.readDir "UUF100.430.1000"
+  let dir  ← System.FilePath.readDir "flat100-239"
   let mut average := 0
   let mut max := 0
   let mut files := 0
-  let mut amount := 0
   for entry in dir do
     let time ← dpll_file entry.path
     if time == 0 then
@@ -43,6 +42,5 @@ def main : IO Unit := do
     else if max < time then max := time
     average := time + average
     files := files + 1
-    amount := amount + 1
-    if amount >= 20 then break
-  IO.print s!"Files run : {files}, average time {average/amount} and max time {max}"
+    /-if files >= 10 then break-/
+  IO.print s!"Files run : {files}, average time {average/files} and max time {max}"
